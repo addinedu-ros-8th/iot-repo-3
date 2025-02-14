@@ -1,2 +1,36 @@
-# iot-repo-3
-IoT 프로젝트 3조 저장소. Smart Deskterior
+![header](https://capsule-render.vercel.app/api?type=venom&color=timeGradient&height=300&section=header&text=ErgoDesk&fontColor=333333&fontSize=90)                       
+Smart DeskTerior
+===========
+Team 3. DeskMate(IOT Project)               
+***
+## :computer: Skill Set
+|Categories|SKills|
+|------|------|
+|IDE|![Static Badge](https://img.shields.io/badge/linux-%23FCC624?style=plastic&logo=linux&logoColor=ffffff) ![Static Badge](https://img.shields.io/badge/ubuntu-22.04-grey?style=plastic&logo=ubuntu&logoColor=ffffff&labelColor=%23E95420) ![Static Badge](https://img.shields.io/badge/vsCode-%232185D0?style=plastic&logo=vscode&logoColor=ffffff) |
+|Design||
+|Data|![Static Badge](https://img.shields.io/badge/mysql-%234479A1?style=plastic&logo=mysql&logoColor=ffffff) ![Static Badge](https://img.shields.io/badge/amazonrds-%23527FFF?style=plastic&logo=amazonrds&logoColor=ffffff)|
+|Programming|![Static Badge](https://img.shields.io/badge/Python-%233776AB?style=plastic&logo=python&logoColor=ffffff) ![Static Badge](https://img.shields.io/badge/jupyter-%23F37626?style=plastic&logo=jupyter&logoColor=ffffff)|
+|Cooperation Tools|![Static Badge](https://img.shields.io/badge/jira-%230052CC?style=plastic&logo=jira&logoColor=ffffff) ![Static Badge](https://img.shields.io/badge/confluence-%23172B4D?style=plastic&logo=confluence&logoColor=ffffff) ![Static Badge](https://img.shields.io/badge/slack-%234A154B?style=plastic&logo=slack)
+
+***
+
+## :hourglass_flowing_sand: 프로젝트 설계 및 개발 계획
+|기간|계획|
+|-----|-----|
+|||
+|||
+|||
+|||
+|||
+
+***
+
+## :sparkles: 구성원 및 역할
+|구성원|역할|
+|-----|-----|
+|이정림(팀장)||
+|심채훈||
+|이우재||
+|권 빛||
+
+***
