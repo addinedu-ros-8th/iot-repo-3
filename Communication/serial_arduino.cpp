@@ -1,22 +1,28 @@
 #include <ArduinoJson.h>
+#include <Servo.h>
+Servo servo1;  // 첫 번째 서보모터 객체
+Servo servo2;  // 두 번째 서보모터 객체
 void setup() {
-  Serial.begin(9600);           // 직렬 통신 시작
+  Serial.begin(9600);  // 시리얼 통신 시작
+  // 서보모터를 원하는 핀에 연결 (핀 번호는 실제 연결 환경에 맞게 수정)
+  servo1.attach(9);
+  servo2.attach(10);
+  // 시리얼 포트가 연결될 때까지 대기 (필요시)
   while (!Serial) {
-    ; // 시리얼 포트가 연결될 때까지 대기 (필요한 경우)
+    ;
   }
-  Serial.println("Arduino Mega JSON Parser 시작");
+  Serial.println("Arduino Mega JSON Parser with Servos 시작");
 }
 void loop() {
-  // 직렬 버퍼에 데이터가 있다면
+  // 시리얼 버퍼에 데이터가 있다면
   if (Serial.available() > 0) {
-    // '\n' 문자를 기준으로 한 줄 전체를 읽어들임
+    // '\n'을 구분자로 한 줄 전체 읽기
     String jsonString = Serial.readStringUntil('\n');
-    jsonString.trim();  // 불필요한 공백 제거
+    jsonString.trim();  // 앞뒤 불필요한 공백 제거
     if (jsonString.length() > 0) {
       Serial.print("수신된 JSON: ");
       Serial.println(jsonString);
-      // JSON 파싱을 위한 DynamicJsonDocument 할당 (용량은 데이터 크기에 맞게 조절)
-      // {"servo1":20,"servo2":45} 형태라면 200바이트 정도면 충분합니다.
+      // JSON 파싱을 위한 DynamicJsonDocument 생성 (용량은 데이터 크기에 따라 조정)
       DynamicJsonDocument doc(200);
       DeserializationError error = deserializeJson(doc, jsonString);
       if (error) {
@@ -24,15 +30,24 @@ void loop() {
         Serial.println(error.f_str());
         return;
       }
-      // JSON 오브젝트로부터 각 키와 값을 추출하여 출력
+      // JSON 객체로부터 파싱된 데이터 얻기
       JsonObject obj = doc.as<JsonObject>();
-      for (JsonPair kv : obj) {
-        const char* key = kv.key().c_str();
-        int value = kv.value();
-        Serial.print("키: ");
-        Serial.print(key);
-        Serial.print(" | 값: ");
-        Serial.println(value);
+      // servo1 키가 존재하면 해당 각도 값으로 서보모터 구동
+      if (obj.containsKey("servo1")) {
+        int angle1 = obj["servo1"];
+        // 0 ~ 180 사이의 값으로 제한
+        angle1 = constrain(angle1, 0, 180);
+        servo1.write(angle1);
+        Serial.print("서보1 각도: ");
+        Serial.println(angle1);
+      }
+      // servo2 키가 존재하면 해당 각도 값으로 서보모터 구동
+      if (obj.containsKey("servo2")) {
+        int angle2 = obj["servo2"];
+        angle2 = constrain(angle2, 0, 180);
+        servo2.write(angle2);
+        Serial.print("서보2 각도: ");
+        Serial.println(angle2);
       }
       Serial.println("-------------------------");
     }
