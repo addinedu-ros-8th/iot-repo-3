@@ -14,12 +14,6 @@ Team 3. DeskMate(IOT Project)
 |Cooperation Tools|![Static Badge](https://img.shields.io/badge/jira-%230052CC?style=plastic&logo=jira&logoColor=ffffff) ![Static Badge](https://img.shields.io/badge/confluence-%23172B4D?style=plastic&logo=confluence&logoColor=ffffff) ![Static Badge](https://img.shields.io/badge/slack-%234A154B?style=plastic&logo=slack)
 
 ***
-
-## :hourglass_flowing_sand: 프로젝트 설계 및 개발 계획
-
-
-***
-
 ## :sparkles: 구성원 및 역할
 |구성원|역할|
 |-----|-----|
@@ -27,5 +21,9 @@ Team 3. DeskMate(IOT Project)
 |심채훈|기구 설계<br>DB 설계<br>책상 높이 제어<br>TCP/IP 통신<br>Desk GUI 구현|
 |이우재|기구 설계<br>DB 설계<br>DB 관리<br>모니터 제어<br>Serial 통신<br>발표|
 |권 빛|user GUI 설계<br>user GUI 구현<br>LED 제어<br>PPT 제작|
+
+***
+## :hourglass_flowing_sand: 프로젝트 설계 및 개발 계획
+
 
 ***
