@@ -1,10 +1,9 @@
 enum hard_ware 
 {
-  rfid
-  led_r,
-  led_g,
-  led_b,
-  led_w
+  linear_actuator1,
+  linear_actuator2,
+  servo_motor1,
+  servo_motor2
 }
 
 enum board
