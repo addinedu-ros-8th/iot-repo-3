@@ -91,7 +91,7 @@ def run_server():
                 except Exception as e:
                     print("오류 발생:", e)
                     break
-            print("서버 종료 시작.")
+            print("연결종료.")
 
 if __name__ == '__main__':
     key_thread = threading.Thread(target=keyboard_listener, daemon=True)
