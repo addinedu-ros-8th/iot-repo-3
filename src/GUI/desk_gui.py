@@ -2,7 +2,7 @@ import sys
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 
-from qt_material import apply_stylesheet
+from qt_material import apply_stylesheet # pip install qt_material 필수
 
 class MainScreen(QWidget):
     def __init__(self, stacked_widget):
@@ -55,34 +55,53 @@ class LEDControlScreen(QWidget):
     def __init__(self, stacked_widget):
         super().__init__()
         self.stacked_widget = stacked_widget
+        self.brightness = 0  # 초기 밝기 값 (0 ~ 8 사이)
+        
         layout = QVBoxLayout()
         
-        self.label = QLabel("LED Control")
+        self.label = QLabel("LED Brightness Control")
         self.label.setAlignment(Qt.AlignCenter)
         layout.addWidget(self.label)
         
         grid_layout = QGridLayout()
-        colors = ["R", "G", "B"]
-        for i, color in enumerate(colors):
-            up_btn = QPushButton("▲")
-            up_btn.setFixedSize(80, 80)
-            grid_layout.addWidget(up_btn, 0, i)
-            
-            color_btn = QLabel(color)
-            color_btn.setFixedSize(80, 80)
-            grid_layout.addWidget(color_btn, 1, i)
-            
-            down_btn = QPushButton("▼")
-            down_btn.setFixedSize(80, 80)
-            grid_layout.addWidget(down_btn, 2, i)
+        
+        # 위(▲) 버튼: 밝기 증가
+        up_btn = QPushButton("▲")
+        up_btn.setFixedSize(80, 80)
+        up_btn.clicked.connect(self.increase_brightness)
+        grid_layout.addWidget(up_btn, 0, 0, alignment=Qt.AlignCenter)
+        
+        # 현재 밝기 값을 표시하는 라벨
+        self.brightness_label = QLabel(str(self.brightness))
+        self.brightness_label.setAlignment(Qt.AlignCenter)
+        self.brightness_label.setFixedSize(80, 80)
+        grid_layout.addWidget(self.brightness_label, 1, 0, alignment=Qt.AlignCenter)
+        
+        # 아래(▼) 버튼: 밝기 감소
+        down_btn = QPushButton("▼")
+        down_btn.setFixedSize(80, 80)
+        down_btn.clicked.connect(self.decrease_brightness)
+        grid_layout.addWidget(down_btn, 2, 0, alignment=Qt.AlignCenter)
         
         layout.addLayout(grid_layout)
+        
         back_btn = QPushButton("Back")
         back_btn.setFixedSize(120, 50)
         back_btn.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(1))
         layout.addWidget(back_btn, alignment=Qt.AlignCenter)
         
         self.setLayout(layout)
+
+    def increase_brightness(self):
+        if self.brightness < 9:
+            self.brightness += 1
+            self.brightness_label.setText(str(self.brightness))
+
+    def decrease_brightness(self):
+        if self.brightness > 0:
+            self.brightness -= 1
+            self.brightness_label.setText(str(self.brightness))
+
 
 class DeskControlScreen(QWidget):
     def __init__(self, stacked_widget):
