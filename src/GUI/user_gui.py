@@ -3,7 +3,97 @@ import socket
 import json
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
+<<<<<<< HEAD
 from qt_material import apply_stylesheet
+=======
+
+from qt_material import apply_stylesheet # pip install qt_material 필수
+
+class LogDataWindow(QMainWindow):
+    """
+    Log Data 창: 로그 테이블을 보여주고, Back 버튼으로 메인화면으로 돌아갑니다.
+    """
+    def __init__(self, main_window):
+        super().__init__()
+        self.main_window = main_window  # 돌아갈 때 메인 윈도우를 다시 보여주기 위해 참조
+        
+        self.setWindowTitle("Log Data")
+        self.resize(1600, 900)
+        
+        # 중앙 위젯
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        
+        # 메인 레이아웃
+        main_layout = QVBoxLayout()
+        central_widget.setLayout(main_layout)
+        
+        # ─────────────────────────────────────────
+        # 상단 레이아웃: ERGODESK / User ID : None / Log Data
+        # ─────────────────────────────────────────
+        top_layout = QHBoxLayout()
+        
+        label_ergodesk = QLabel("ERGODESK")
+        label_ergodesk.setStyleSheet("font-size: 18pt; font-weight: bold;")
+        
+        label_user_id = QLabel("User ID : None")
+        label_log_data = QLabel("Log Data")
+        
+        top_layout.addWidget(label_ergodesk)
+        top_layout.addStretch(1)
+        top_layout.addWidget(label_user_id)
+        top_layout.addWidget(label_log_data)
+        
+        main_layout.addLayout(top_layout)
+        
+        # ─────────────────────────────────────────
+        # 테이블 위젯
+        # ─────────────────────────────────────────
+        self.table = QTableWidget()
+        self.table.setColumnCount(7)
+        self.table.setHorizontalHeaderLabels([
+            "Log ID", "Time Stamp", "Request ID", "Target", "Action", "Value", "Status"
+        ])
+        
+        # 예시 데이터 2행
+        self.table.setRowCount(2)
+        # 첫 번째 행
+        self.table.setItem(0, 0, QTableWidgetItem("lg01"))
+        self.table.setItem(0, 1, QTableWidgetItem("2025-02-14 10:37:30"))
+        self.table.setItem(0, 2, QTableWidgetItem("desk_gui"))
+        self.table.setItem(0, 3, QTableWidgetItem("servo1"))
+        self.table.setItem(0, 4, QTableWidgetItem("tilt"))
+        self.table.setItem(0, 5, QTableWidgetItem("30"))
+        self.table.setItem(0, 6, QTableWidgetItem("success"))
+        
+        # 두 번째 행
+        self.table.setItem(1, 0, QTableWidgetItem("lg02"))
+        self.table.setItem(1, 1, QTableWidgetItem("2025-02-16 13:37:30"))
+        self.table.setItem(1, 2, QTableWidgetItem("desk_gui"))
+        self.table.setItem(1, 3, QTableWidgetItem("Led1"))
+        self.table.setItem(1, 4, QTableWidgetItem("on"))
+        self.table.setItem(1, 5, QTableWidgetItem("255"))
+        self.table.setItem(1, 6, QTableWidgetItem("success"))
+        
+        # 열 너비 자동으로 맞춤
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        
+        main_layout.addWidget(self.table)
+        
+        # ─────────────────────────────────────────
+        # 하단 Back 버튼
+        # ─────────────────────────────────────────
+        btn_back = QPushButton("Back")
+        btn_back.clicked.connect(self.go_back)
+        main_layout.addWidget(btn_back, alignment=Qt.AlignRight)
+        
+    def go_back(self):
+        """
+        Back 버튼을 누르면 LogDataWindow를 닫고, 메인 윈도우를 다시 표시합니다.
+        """
+        self.main_window.show()
+        self.close()
+>>>>>>> 66af546 (user gui edit)
 
 # QThread를 이용한 소켓 클라이언트 구현
 class SocketClientThread(QThread):
@@ -187,10 +277,20 @@ class MainWindow(QMainWindow):
         self.label_ergodesk = QLabel("ERGODESK")
         self.label_ergodesk.setStyleSheet("font-size: 18pt; font-weight: bold;")
         self.label_user_id = QLabel("User ID : None")
+<<<<<<< HEAD
         self.label_log_data = QLabel("Log Data")
         top_layout.addWidget(self.label_ergodesk)
         top_layout.addWidget(self.label_user_id)
         top_layout.addWidget(self.label_log_data)
+=======
+        # 여기서 Log Data를 버튼으로 만들어서 클릭 시 로그창으로 이동
+        self.btn_log_data = QPushButton("Log Data")
+        
+        top_layout.addWidget(self.label_ergodesk)
+        top_layout.addWidget(self.label_user_id)
+        top_layout.addWidget(self.btn_log_data)
+        
+>>>>>>> 66af546 (user gui edit)
         main_layout.addLayout(top_layout)
 
         # 중단 레이아웃 (좌측: 버튼, 우측: 값 표시)
@@ -241,12 +341,17 @@ class MainWindow(QMainWindow):
         self.btn_mode3.clicked.connect(self.load_mode3)
         self.btn_control.clicked.connect(self.enter_control_mode)
         self.btn_save_in_mode.clicked.connect(self.go_save_in_mode_page)
+<<<<<<< HEAD
 
         # 서버로부터 값을 수신하는 소켓 클라이언트 스레드 시작
         self.client_thread = SocketClientThread('192.168.0.45', 1234)
         self.client_thread.newMessage.connect(self.handle_new_message)
         self.client_thread.start()
 
+=======
+        self.btn_log_data.clicked.connect(self.show_log_data_window)
+        
+>>>>>>> 66af546 (user gui edit)
     def update_labels(self):
         self.label_r.setText(f"R : {self.currentValues['R']}")
         self.label_g.setText(f"G : {self.currentValues['G']}")
@@ -284,6 +389,7 @@ class MainWindow(QMainWindow):
             if selected_mode in self.modes:
                 self.modes[selected_mode] = self.currentValues.copy()
                 print(f"현재 설정을 Mode {selected_mode}에 저장했습니다.")
+<<<<<<< HEAD
 
     def send_current_values(self):
         # 서버로 현재 상태를 전송
@@ -316,6 +422,16 @@ class MainWindow(QMainWindow):
         self.client_thread.stop()
         event.accept()
 
+=======
+        
+    def show_log_data_window(self):
+        """
+        Log Data 버튼을 누르면 LogDataWindow를 띄우고, MainWindow는 숨깁니다.
+        """
+        self.log_window = LogDataWindow(self)
+        self.log_window.show()
+        self.hide()
+>>>>>>> 66af546 (user gui edit)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
