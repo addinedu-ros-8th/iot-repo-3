@@ -3,11 +3,62 @@ import socket
 import json
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-<<<<<<< HEAD
-from qt_material import apply_stylesheet
-=======
+from qt_material import apply_stylesheet # pip install qt_material 설치
 
-from qt_material import apply_stylesheet # pip install qt_material 필수
+# QThread를 이용한 소켓 클라이언트 구현
+class SocketClientThread(QThread):
+    newMessage = pyqtSignal(dict)  # 수신한 JSON 메시지를 전달하는 시그널
+
+    def __init__(self, host, port, parent=None):
+        super().__init__(parent)
+        self.host = '192.168.0.45'
+        self.port = 8978
+        self.running = True
+        self.sock = None
+
+    def run(self):
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            self.sock.connect((self.host, self.port))
+            print("서버에 연결되었습니다. (GUI 클라이언트)")
+        except Exception as e:
+            print("서버 연결 실패:", e)
+            return
+
+        while self.running:
+            try:
+                data = self.sock.recv(1024)
+                if not data:
+                    print("서버가 연결을 종료했습니다.")
+                    break
+                message = data.decode('utf-8')
+                try:
+                    json_message = json.loads(message)
+                    # 수신된 JSON 데이터를 시그널로 전달
+                    self.newMessage.emit(json_message)
+                except json.JSONDecodeError:
+                    print("수신된 메시지 (문자열):", message)
+            except Exception as e:
+                print("수신 오류:", e)
+                break
+
+        self.sock.close()
+
+    def send_data(self, data):
+        try:
+            json_str = json.dumps(data, separators=(',', ':'))
+            self.sock.sendall(json_str.encode('utf-8'))
+            print("클라이언트: 서버에 전송:", json_str)
+        except Exception as e:
+            print("전송 오류:", e)
+
+    def stop(self):
+        self.running = False
+        if self.sock:
+            self.sock.close()
+        self.quit()
+        self.wait()
+
 
 class LogDataWindow(QMainWindow):
     """
@@ -93,61 +144,7 @@ class LogDataWindow(QMainWindow):
         """
         self.main_window.show()
         self.close()
->>>>>>> 66af546 (user gui edit)
 
-# QThread를 이용한 소켓 클라이언트 구현
-class SocketClientThread(QThread):
-    newMessage = pyqtSignal(dict)  # 수신한 JSON 메시지를 전달하는 시그널
-
-    def __init__(self, host, port, parent=None):
-        super().__init__(parent)
-        self.host = '192.168.0.45'
-        self.port = 8978
-        self.running = True
-        self.sock = None
-
-    def run(self):
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            self.sock.connect((self.host, self.port))
-            print("서버에 연결되었습니다. (GUI 클라이언트)")
-        except Exception as e:
-            print("서버 연결 실패:", e)
-            return
-
-        while self.running:
-            try:
-                data = self.sock.recv(1024)
-                if not data:
-                    print("서버가 연결을 종료했습니다.")
-                    break
-                message = data.decode('utf-8')
-                try:
-                    json_message = json.loads(message)
-                    # 수신된 JSON 데이터를 시그널로 전달
-                    self.newMessage.emit(json_message)
-                except json.JSONDecodeError:
-                    print("수신된 메시지 (문자열):", message)
-            except Exception as e:
-                print("수신 오류:", e)
-                break
-
-        self.sock.close()
-
-    def send_data(self, data):
-        try:
-            json_str = json.dumps(data, separators=(',', ':'))
-            self.sock.sendall(json_str.encode('utf-8'))
-            print("클라이언트: 서버에 전송:", json_str)
-        except Exception as e:
-            print("전송 오류:", e)
-
-    def stop(self):
-        self.running = False
-        if self.sock:
-            self.sock.close()
-        self.quit()
-        self.wait()
 
 
 class ControlDialog(QDialog):
@@ -277,20 +274,10 @@ class MainWindow(QMainWindow):
         self.label_ergodesk = QLabel("ERGODESK")
         self.label_ergodesk.setStyleSheet("font-size: 18pt; font-weight: bold;")
         self.label_user_id = QLabel("User ID : None")
-<<<<<<< HEAD
-        self.label_log_data = QLabel("Log Data")
-        top_layout.addWidget(self.label_ergodesk)
-        top_layout.addWidget(self.label_user_id)
-        top_layout.addWidget(self.label_log_data)
-=======
-        # 여기서 Log Data를 버튼으로 만들어서 클릭 시 로그창으로 이동
         self.btn_log_data = QPushButton("Log Data")
-        
         top_layout.addWidget(self.label_ergodesk)
         top_layout.addWidget(self.label_user_id)
         top_layout.addWidget(self.btn_log_data)
-        
->>>>>>> 66af546 (user gui edit)
         main_layout.addLayout(top_layout)
 
         # 중단 레이아웃 (좌측: 버튼, 우측: 값 표시)
@@ -341,17 +328,13 @@ class MainWindow(QMainWindow):
         self.btn_mode3.clicked.connect(self.load_mode3)
         self.btn_control.clicked.connect(self.enter_control_mode)
         self.btn_save_in_mode.clicked.connect(self.go_save_in_mode_page)
-<<<<<<< HEAD
+        self.btn_log_data.clicked.connect(self.show_log_data_window)
 
         # 서버로부터 값을 수신하는 소켓 클라이언트 스레드 시작
         self.client_thread = SocketClientThread('192.168.0.45', 1234)
         self.client_thread.newMessage.connect(self.handle_new_message)
         self.client_thread.start()
 
-=======
-        self.btn_log_data.clicked.connect(self.show_log_data_window)
-        
->>>>>>> 66af546 (user gui edit)
     def update_labels(self):
         self.label_r.setText(f"R : {self.currentValues['R']}")
         self.label_g.setText(f"G : {self.currentValues['G']}")
@@ -389,7 +372,14 @@ class MainWindow(QMainWindow):
             if selected_mode in self.modes:
                 self.modes[selected_mode] = self.currentValues.copy()
                 print(f"현재 설정을 Mode {selected_mode}에 저장했습니다.")
-<<<<<<< HEAD
+
+    def show_log_data_window(self):
+        """
+        Log Data 버튼을 누르면 LogDataWindow를 띄우고, MainWindow는 숨깁니다.
+        """
+        self.log_window = LogDataWindow(self)
+        self.log_window.show()
+        self.hide()
 
     def send_current_values(self):
         # 서버로 현재 상태를 전송
@@ -422,16 +412,6 @@ class MainWindow(QMainWindow):
         self.client_thread.stop()
         event.accept()
 
-=======
-        
-    def show_log_data_window(self):
-        """
-        Log Data 버튼을 누르면 LogDataWindow를 띄우고, MainWindow는 숨깁니다.
-        """
-        self.log_window = LogDataWindow(self)
-        self.log_window.show()
-        self.hide()
->>>>>>> 66af546 (user gui edit)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
