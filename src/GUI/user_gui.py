@@ -3,9 +3,11 @@ import socket
 import json
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-from qt_material import apply_stylesheet # pip install qt_material 설치
+from qt_material import apply_stylesheet  # pip install qt_material 설치
 
+# ─────────────────────────────────────────
 # QThread를 이용한 소켓 클라이언트 구현
+# ─────────────────────────────────────────
 class SocketClientThread(QThread):
     newMessage = pyqtSignal(dict)  # 수신한 JSON 메시지를 전달하는 시그널
 
@@ -60,138 +62,77 @@ class SocketClientThread(QThread):
         self.wait()
 
 
-class LogDataWindow(QMainWindow):
-    """
-    Log Data 창: 로그 테이블을 보여주고, Back 버튼으로 메인화면으로 돌아갑니다.
-    """
-    def __init__(self, main_window):
-        super().__init__()
-        self.main_window = main_window  # 돌아갈 때 메인 윈도우를 다시 보여주기 위해 참조
-        
-        self.setWindowTitle("Log Data")
-        self.resize(1600, 900)
-        
-        # 중앙 위젯
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        
-        # 메인 레이아웃
-        main_layout = QVBoxLayout()
-        central_widget.setLayout(main_layout)
-        
-        # ─────────────────────────────────────────
-        # 상단 레이아웃: ERGODESK / User ID : None / Log Data
-        # ─────────────────────────────────────────
-        top_layout = QHBoxLayout()
-        
-        label_ergodesk = QLabel("ERGODESK")
-        label_ergodesk.setStyleSheet("font-size: 18pt; font-weight: bold;")
-        
-        label_user_id = QLabel("User ID : None")
-        label_log_data = QLabel("Log Data")
-        
-        top_layout.addWidget(label_ergodesk)
-        top_layout.addStretch(1)
-        top_layout.addWidget(label_user_id)
-        top_layout.addWidget(label_log_data)
-        
-        main_layout.addLayout(top_layout)
-        
-        # ─────────────────────────────────────────
-        # 테이블 위젯
-        # ─────────────────────────────────────────
-        self.table = QTableWidget()
-        self.table.setColumnCount(7)
-        self.table.setHorizontalHeaderLabels([
-            "Log ID", "Time Stamp", "Request ID", "Target", "Action", "Value", "Status"
-        ])
-        
-        # 예시 데이터 2행
-        self.table.setRowCount(2)
-        # 첫 번째 행
-        self.table.setItem(0, 0, QTableWidgetItem("lg01"))
-        self.table.setItem(0, 1, QTableWidgetItem("2025-02-14 10:37:30"))
-        self.table.setItem(0, 2, QTableWidgetItem("desk_gui"))
-        self.table.setItem(0, 3, QTableWidgetItem("servo1"))
-        self.table.setItem(0, 4, QTableWidgetItem("tilt"))
-        self.table.setItem(0, 5, QTableWidgetItem("30"))
-        self.table.setItem(0, 6, QTableWidgetItem("success"))
-        
-        # 두 번째 행
-        self.table.setItem(1, 0, QTableWidgetItem("lg02"))
-        self.table.setItem(1, 1, QTableWidgetItem("2025-02-16 13:37:30"))
-        self.table.setItem(1, 2, QTableWidgetItem("desk_gui"))
-        self.table.setItem(1, 3, QTableWidgetItem("Led1"))
-        self.table.setItem(1, 4, QTableWidgetItem("on"))
-        self.table.setItem(1, 5, QTableWidgetItem("255"))
-        self.table.setItem(1, 6, QTableWidgetItem("success"))
-        
-        # 열 너비 자동으로 맞춤
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        
-        main_layout.addWidget(self.table)
-        
-        # ─────────────────────────────────────────
-        # 하단 Back 버튼
-        # ─────────────────────────────────────────
-        btn_back = QPushButton("Back")
-        btn_back.clicked.connect(self.go_back)
-        main_layout.addWidget(btn_back, alignment=Qt.AlignRight)
-        
-    def go_back(self):
-        """
-        Back 버튼을 누르면 LogDataWindow를 닫고, 메인 윈도우를 다시 표시합니다.
-        """
-        self.main_window.show()
-        self.close()
-
-
-
+# ─────────────────────────────────────────
+# ControlDialog (Control Mode)
+# ─────────────────────────────────────────
 class ControlDialog(QDialog):
     def __init__(self, current_values, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Control Mode")
+        self.setFixedSize(600, 400)
         self.current_values = current_values.copy()  # 현재값 복사해서 로컬에서 수정
 
         layout = QVBoxLayout()
 
         # LED 설정
         led_layout = QHBoxLayout()
+        self.label_r_title = QLabel("R:")
+        self.label_r_title.setStyleSheet("font-size: 18pt;")
+        self.label_g_title = QLabel("G:")
+        self.label_g_title.setStyleSheet("font-size: 18pt;")
+        self.label_b_title = QLabel("B:")
+        self.label_b_title.setStyleSheet("font-size: 18pt;")
+
         self.spin_r = QSpinBox()
+        self.spin_r.setStyleSheet("font-size: 18pt;")
         self.spin_g = QSpinBox()
+        self.spin_g.setStyleSheet("font-size: 18pt;")
         self.spin_b = QSpinBox()
+        self.spin_b.setStyleSheet("font-size: 18pt;")
         self.spin_r.setRange(0, 8)
         self.spin_g.setRange(0, 8)
         self.spin_b.setRange(0, 8)
         self.spin_r.setValue(self.current_values["R"])
         self.spin_g.setValue(self.current_values["G"])
         self.spin_b.setValue(self.current_values["B"])
-        led_layout.addWidget(QLabel("R:"))
+
+        led_layout.addWidget(self.label_r_title)
         led_layout.addWidget(self.spin_r)
-        led_layout.addWidget(QLabel("G:"))
+        led_layout.addWidget(self.label_g_title)
         led_layout.addWidget(self.spin_g)
-        led_layout.addWidget(QLabel("B:"))
+        led_layout.addWidget(self.label_b_title)
         led_layout.addWidget(self.spin_b)
 
         # Desk 설정
         desk_layout = QHBoxLayout()
+        self.label_desk_title = QLabel("Desk Height:")
+        self.label_desk_title.setStyleSheet("font-size: 18pt;")
         self.spin_desk_height = QSpinBox()
+        self.spin_desk_height.setStyleSheet("font-size: 18pt;")
         self.spin_desk_height.setRange(0, 50)
         self.spin_desk_height.setValue(self.current_values["DeskHeight"])
-        desk_layout.addWidget(QLabel("Desk Height:"))
+        desk_layout.addWidget(self.label_desk_title)
         desk_layout.addWidget(self.spin_desk_height)
 
         # Monitor 설정
         monitor_layout = QHBoxLayout()
+        self.label_monitor_height_title = QLabel("Monitor Height:")
+        self.label_monitor_height_title.setStyleSheet("font-size: 18pt;")
         self.spin_monitor_height = QSpinBox()
+        self.spin_monitor_height.setStyleSheet("font-size: 18pt;")
         self.spin_monitor_height.setRange(0, 90)
         self.spin_monitor_height.setValue(self.current_values["MonitorHeight"])
+
+        self.label_monitor_angle_title = QLabel("Angle:")
+        self.label_monitor_angle_title.setStyleSheet("font-size: 18pt;")
         self.spin_monitor_angle = QSpinBox()
+        self.spin_monitor_angle.setStyleSheet("font-size: 18pt;")
         self.spin_monitor_angle.setRange(0, 90)
         self.spin_monitor_angle.setValue(self.current_values["MonitorAngle"])
-        monitor_layout.addWidget(QLabel("Monitor Height:"))
+
+        monitor_layout.addWidget(self.label_monitor_height_title)
         monitor_layout.addWidget(self.spin_monitor_height)
-        monitor_layout.addWidget(QLabel("Angle:"))
+        monitor_layout.addWidget(self.label_monitor_angle_title)
         monitor_layout.addWidget(self.spin_monitor_angle)
 
         layout.addLayout(led_layout)
@@ -200,6 +141,7 @@ class ControlDialog(QDialog):
 
         # 버튼(OK/Cancel)
         button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.setStyleSheet("font-size: 18pt;")
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
@@ -217,37 +159,139 @@ class ControlDialog(QDialog):
         }
 
 
+# ─────────────────────────────────────────
+# SaveInModeDialog (Save in Mode)
+# ─────────────────────────────────────────
 class SaveInModeDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Save in Mode")
+        self.setFixedSize(600, 400)
         layout = QVBoxLayout()
+
         self.radio_group = QButtonGroup(self)
+
         self.radio_mode1 = QRadioButton("Mode 1")
+        self.radio_mode1.setStyleSheet("font-size: 18pt;")
         self.radio_mode2 = QRadioButton("Mode 2")
+        self.radio_mode2.setStyleSheet("font-size: 18pt;")
         self.radio_mode3 = QRadioButton("Mode 3")
+        self.radio_mode3.setStyleSheet("font-size: 18pt;")
+
         self.radio_mode1.setChecked(True)
         self.radio_group.addButton(self.radio_mode1, 1)
         self.radio_group.addButton(self.radio_mode2, 2)
         self.radio_group.addButton(self.radio_mode3, 3)
+
         layout.addWidget(self.radio_mode1)
         layout.addWidget(self.radio_mode2)
         layout.addWidget(self.radio_mode3)
+
         button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.setStyleSheet("font-size: 18pt;")
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
+
         self.setLayout(layout)
 
     def get_selected_mode(self):
         return self.radio_group.checkedId()
 
 
+# ─────────────────────────────────────────
+# LogDataWindow (로그 테이블 화면)
+# ─────────────────────────────────────────
+class LogDataWindow(QMainWindow):
+    """
+    Log Data 창: 로그 테이블을 보여주고, Back 버튼으로 메인화면으로 돌아갑니다.
+    """
+    def __init__(self, main_window):
+        super().__init__()
+        self.main_window = main_window  # 돌아갈 때 메인 윈도우를 다시 보여주기 위해 참조
+        
+        self.setWindowTitle("Log Data")
+        self.setFixedSize(1280, 720)
+        
+        # 중앙 위젯
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        
+        # 메인 레이아웃
+        main_layout = QVBoxLayout()
+        central_widget.setLayout(main_layout)
+        
+        # 상단 레이아웃: ERGODESK / User ID : None / Log Data
+        top_layout = QHBoxLayout()
+        
+        self.label_ergodesk = QLabel("ERGODESK")
+        self.label_ergodesk.setStyleSheet("font-size: 18pt; font-weight: bold;")
+
+        self.label_user_id = QLabel("User ID : None")
+        self.label_user_id.setStyleSheet("font-size: 18pt;")
+
+        self.label_log_data = QLabel("Log Data")
+        self.label_log_data.setStyleSheet("font-size: 18pt;")
+
+        top_layout.addWidget(self.label_ergodesk)
+        top_layout.addWidget(self.label_user_id)
+        top_layout.addWidget(self.label_log_data)
+        
+        main_layout.addLayout(top_layout)
+        
+        # 테이블 위젯
+        self.table = QTableWidget()
+        self.table.setStyleSheet("font-size: 18pt;")
+        self.table.setColumnCount(7)
+        self.table.setHorizontalHeaderLabels([
+            "Log ID", "Time Stamp", "Request ID", "Target", "Action", "Value", "Status"
+        ])
+        
+        # 예시 데이터 2행
+        self.table.setRowCount(2)
+        self.table.setItem(0, 0, QTableWidgetItem("lg01"))
+        self.table.setItem(0, 1, QTableWidgetItem("2025-02-14 10:37:30"))
+        self.table.setItem(0, 2, QTableWidgetItem("desk_gui"))
+        self.table.setItem(0, 3, QTableWidgetItem("servo1"))
+        self.table.setItem(0, 4, QTableWidgetItem("tilt"))
+        self.table.setItem(0, 5, QTableWidgetItem("30"))
+        self.table.setItem(0, 6, QTableWidgetItem("success"))
+
+        self.table.setItem(1, 0, QTableWidgetItem("lg02"))
+        self.table.setItem(1, 1, QTableWidgetItem("2025-02-16 13:37:30"))
+        self.table.setItem(1, 2, QTableWidgetItem("desk_gui"))
+        self.table.setItem(1, 3, QTableWidgetItem("Led1"))
+        self.table.setItem(1, 4, QTableWidgetItem("on"))
+        self.table.setItem(1, 5, QTableWidgetItem("255"))
+        self.table.setItem(1, 6, QTableWidgetItem("success"))
+        
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        
+        main_layout.addWidget(self.table)
+        
+        # 하단 Back 버튼
+        self.btn_back = QPushButton("Back")
+        self.btn_back.setStyleSheet("font-size: 18pt;")
+        self.btn_back.setFixedSize(140, 100)
+        self.btn_back.clicked.connect(self.go_back)
+        main_layout.addWidget(self.btn_back, alignment=Qt.AlignRight)
+        
+    def go_back(self):
+        """
+        Back 버튼을 누르면 LogDataWindow를 닫고, 메인 윈도우를 다시 표시합니다.
+        """
+        self.main_window.show()
+        self.close()
+
+
+# ─────────────────────────────────────────
+# 메인 윈도우
+# ─────────────────────────────────────────
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("ErgoDesk GUI")
-        self.resize(1600, 900)
+        self.setFixedSize(1280, 720)
 
         self.currentValues = {
             "R": 0,
@@ -271,10 +315,16 @@ class MainWindow(QMainWindow):
 
         # 상단 레이아웃
         top_layout = QHBoxLayout()
+
         self.label_ergodesk = QLabel("ERGODESK")
         self.label_ergodesk.setStyleSheet("font-size: 18pt; font-weight: bold;")
+
         self.label_user_id = QLabel("User ID : None")
+        self.label_user_id.setStyleSheet("font-size: 18pt;")
+
         self.btn_log_data = QPushButton("Log Data")
+        self.btn_log_data.setStyleSheet("font-size: 18pt;")
+
         top_layout.addWidget(self.label_ergodesk)
         top_layout.addWidget(self.label_user_id)
         top_layout.addWidget(self.btn_log_data)
@@ -286,10 +336,23 @@ class MainWindow(QMainWindow):
 
         # 좌측 버튼 레이아웃
         left_layout = QVBoxLayout()
+
         self.btn_mode1 = QPushButton("Mode 1")
+        self.btn_mode1.setStyleSheet("font-size: 18pt;")
+        self.btn_mode1.setFixedSize(200,100)
+
         self.btn_mode2 = QPushButton("Mode 2")
+        self.btn_mode2.setStyleSheet("font-size: 18pt;")
+        self.btn_mode2.setFixedSize(200,100)
+
         self.btn_mode3 = QPushButton("Mode 3")
+        self.btn_mode3.setStyleSheet("font-size: 18pt;")
+        self.btn_mode3.setFixedSize(200,100)
+
         self.btn_control = QPushButton("Control Mode")
+        self.btn_control.setStyleSheet("font-size: 18pt;")
+        self.btn_control.setFixedSize(200,100)
+
         left_layout.addWidget(self.btn_mode1)
         left_layout.addWidget(self.btn_mode2)
         left_layout.addWidget(self.btn_mode3)
@@ -299,28 +362,59 @@ class MainWindow(QMainWindow):
         # 우측 값 표시 레이아웃
         right_layout = QGridLayout()
         middle_layout.addLayout(right_layout)
+
         self.label_led_title = QLabel("LED")
+        self.label_led_title.setStyleSheet("font-size: 18pt;")
+
         self.label_r = QLabel(f"R : {self.currentValues['R']}")
+        self.label_r.setStyleSheet("font-size: 18pt;")
+
         self.label_g = QLabel(f"G : {self.currentValues['G']}")
+        self.label_g.setStyleSheet("font-size: 18pt;")
+
         self.label_b = QLabel(f"B : {self.currentValues['B']}")
+        self.label_b.setStyleSheet("font-size: 18pt;")
+
         right_layout.addWidget(self.label_led_title, 0, 0)
         right_layout.addWidget(self.label_r, 0, 1)
         right_layout.addWidget(self.label_g, 0, 2)
         right_layout.addWidget(self.label_b, 0, 3)
+
         self.label_desk_title = QLabel("DESK")
+        self.label_desk_title.setStyleSheet("font-size: 18pt;")
+
         self.label_desk_height = QLabel(f"Height : {self.currentValues['DeskHeight']}")
+        self.label_desk_height.setStyleSheet("font-size: 18pt;")
+
         right_layout.addWidget(self.label_desk_title, 1, 0)
         right_layout.addWidget(self.label_desk_height, 1, 1)
+
         self.label_monitor_title = QLabel("MONITOR")
+        self.label_monitor_title.setStyleSheet("font-size: 18pt;")
+
         self.label_monitor_height = QLabel(f"Height : {self.currentValues['MonitorHeight']}")
+        self.label_monitor_height.setStyleSheet("font-size: 18pt;")
+
         self.label_monitor_angle = QLabel(f"Angle : {self.currentValues['MonitorAngle']}")
+        self.label_monitor_angle.setStyleSheet("font-size: 18pt;")
+
         right_layout.addWidget(self.label_monitor_title, 2, 0)
         right_layout.addWidget(self.label_monitor_height, 2, 1)
         right_layout.addWidget(self.label_monitor_angle, 2, 2)
 
-        # 하단 Save in Mode 버튼
+        # 하단: Save in Mode 버튼과 로그 출력 레이블을 포함하는 레이아웃
+        save_log_layout = QHBoxLayout()
         self.btn_save_in_mode = QPushButton("Save in Mode")
-        main_layout.addWidget(self.btn_save_in_mode, alignment=Qt.AlignRight)
+        self.btn_save_in_mode.setStyleSheet("font-size: 18pt;")
+        self.btn_save_in_mode.setFixedSize(200,80)
+        # 로그 출력용 레이블
+        self.log_label = QLabel("")
+        self.log_label.setStyleSheet("font-size: 18pt; color: white; background-color: #444444;")
+        self.log_label.setFixedHeight(80)
+        self.log_label.setAlignment(Qt.AlignCenter)
+        save_log_layout.addWidget(self.btn_save_in_mode)
+        save_log_layout.addWidget(self.log_label)
+        main_layout.addLayout(save_log_layout)
 
         # 버튼 시그널 연결
         self.btn_mode1.clicked.connect(self.load_mode1)
@@ -335,6 +429,15 @@ class MainWindow(QMainWindow):
         self.client_thread.newMessage.connect(self.handle_new_message)
         self.client_thread.start()
 
+    # ─────────────────────────────────────────
+    # 로그 메시지 업데이트 함수
+    # ─────────────────────────────────────────
+    def log_message(self, message):
+        self.log_label.setText(message)
+
+    # ─────────────────────────────────────────
+    # 상태 라벨 업데이트
+    # ─────────────────────────────────────────
     def update_labels(self):
         self.label_r.setText(f"R : {self.currentValues['R']}")
         self.label_g.setText(f"G : {self.currentValues['G']}")
@@ -343,46 +446,61 @@ class MainWindow(QMainWindow):
         self.label_monitor_height.setText(f"Height : {self.currentValues['MonitorHeight']}")
         self.label_monitor_angle.setText(f"Angle : {self.currentValues['MonitorAngle']}")
 
+    # ─────────────────────────────────────────
+    # 모드 로드 + 서버로 전송 및 로그 메시지 출력
+    # ─────────────────────────────────────────
     def load_mode1(self):
         self.currentValues = self.modes[1].copy()
         self.update_labels()
         self.send_current_values()
+        self.log_message("Mode 1 loaded.")
 
     def load_mode2(self):
         self.currentValues = self.modes[2].copy()
         self.update_labels()
         self.send_current_values()
+        self.log_message("Mode 2 loaded.")
 
     def load_mode3(self):
         self.currentValues = self.modes[3].copy()
         self.update_labels()
         self.send_current_values()
+        self.log_message("Mode 3 loaded.")
 
+    # ─────────────────────────────────────────
+    # Control Mode 다이얼로그 (값 변경 후 로그 메시지 출력)
+    # ─────────────────────────────────────────
     def enter_control_mode(self):
         dlg = ControlDialog(self.currentValues, self)
         if dlg.exec_() == QDialog.Accepted:
             self.currentValues = dlg.get_values()
             self.update_labels()
             self.send_current_values()
+            self.log_message("Control mode updated.")
 
+    # ─────────────────────────────────────────
+    # Save in Mode 다이얼로그 (값 저장 후 로그 메시지 출력)
+    # ─────────────────────────────────────────
     def go_save_in_mode_page(self):
         dlg = SaveInModeDialog(self)
         if dlg.exec_() == QDialog.Accepted:
             selected_mode = dlg.get_selected_mode()
             if selected_mode in self.modes:
                 self.modes[selected_mode] = self.currentValues.copy()
-                print(f"현재 설정을 Mode {selected_mode}에 저장했습니다.")
+                self.log_message(f"현재 설정을 Mode {selected_mode}에 저장했습니다.")
 
+    # ─────────────────────────────────────────
+    # Log Data 창 열기
+    # ─────────────────────────────────────────
     def show_log_data_window(self):
-        """
-        Log Data 버튼을 누르면 LogDataWindow를 띄우고, MainWindow는 숨깁니다.
-        """
         self.log_window = LogDataWindow(self)
         self.log_window.show()
         self.hide()
 
+    # ─────────────────────────────────────────
+    # 서버로 현재 상태 전송
+    # ─────────────────────────────────────────
     def send_current_values(self):
-        # 서버로 현재 상태를 전송
         data = {
             "LED R": self.currentValues["R"],
             "LED G": self.currentValues["G"],
@@ -393,6 +511,9 @@ class MainWindow(QMainWindow):
         }
         self.client_thread.send_data(data)
 
+    # ─────────────────────────────────────────
+    # 서버에서 온 메시지 처리
+    # ─────────────────────────────────────────
     def handle_new_message(self, msg):
         if "LED R" in msg:
             self.currentValues["R"] = msg["LED R"]
@@ -408,14 +529,20 @@ class MainWindow(QMainWindow):
             self.currentValues["MonitorAngle"] = msg["MonitorAngle"]
         self.update_labels()
 
+    # ─────────────────────────────────────────
+    # 종료 시 소켓 스레드 정리
+    # ─────────────────────────────────────────
     def closeEvent(self, event):
         self.client_thread.stop()
         event.accept()
 
 
+# ─────────────────────────────────────────
+# 메인 실행
+# ─────────────────────────────────────────
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = MainWindow()
     apply_stylesheet(app, theme='dark_teal.xml')
+    window = MainWindow()
     window.show()
     sys.exit(app.exec_())
