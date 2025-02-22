@@ -14,7 +14,7 @@ Adafruit_NeoPixel ring = Adafruit_NeoPixel(NUM_LEDS, LED_PIN, NEO_GRB + NEO_KHZ8
 
 int led_r = 0; 
 int led_g = 0; 
-int leg_b = 0; // 파란색은 leg_b 사용
+int led_b = 0; // 파란색은 led_b 사용
 
 int brightness = 0;         // 현재 밝기 (0~max_brightness)
 const int step = 1;         // 밝기 증감량
@@ -34,7 +34,7 @@ struct ModeData {
   uint8_t mode;
   uint8_t led_r;
   uint8_t led_g;
-  uint8_t leg_b;         // 통일: led_b -> leg_b
+  uint8_t led_b;         // 통일: led_b -> led_b
   uint8_t led_w;
   uint8_t servo_1;
   uint8_t servo_2;
@@ -48,7 +48,7 @@ void sendLEDStatus() {
   DynamicJsonDocument doc(200);
   doc["led_r"] = led_r;
   doc["led_g"] = led_g;
-  doc["leg_b"] = leg_b;
+  doc["led_b"] = led_b;
   serializeJson(doc, Serial);
   Serial.println();
   Serial.flush();
@@ -57,7 +57,7 @@ void sendLEDStatus() {
 // LED 업데이트 함수
 void updateLEDs() {
   for (int i = 0; i < NUM_LEDS; i++) {
-    ring.setPixelColor(i, ring.Color(led_r, led_g, leg_b));
+    ring.setPixelColor(i, ring.Color(led_r, led_g, led_b));
   }
   ring.show();
 }
@@ -82,7 +82,7 @@ MFRC522::StatusCode writeRFIDData(int block, ModeData data, MFRC522::Uid *uid) {
   buffer[0] = data.mode;
   buffer[1] = data.led_r;
   buffer[2] = data.led_g;
-  buffer[3] = data.leg_b;    // 통일된 키
+  buffer[3] = data.led_b;    // 통일된 키
   buffer[4] = data.led_w;
   buffer[5] = data.servo_1;
   buffer[6] = data.servo_2;
@@ -109,7 +109,7 @@ MFRC522::StatusCode readRFIDData(int block, ModeData &data, MFRC522::Uid *uid) {
     data.mode = buffer[0];
     data.led_r = buffer[1];
     data.led_g = buffer[2];
-    data.leg_b = buffer[3];    // 통일된 키
+    data.led_b = buffer[3];    // 통일된 키
     data.led_w = buffer[4];
     data.servo_1 = buffer[5];
     data.servo_2 = buffer[6];
@@ -124,9 +124,9 @@ MFRC522::StatusCode readRFIDData(int block, ModeData &data, MFRC522::Uid *uid) {
 }
 
 // Sample JSON 데이터 (ModeData 초기값) – 통일된 키 사용
-const char json1[] = "{\"mode\":1,\"led_r\":120,\"led_g\":45,\"leg_b\":200,\"led_w\":75,\"servo_1\":90,\"servo_2\":135,\"LinearActuator\":300}";
-const char json2[] = "{\"mode\":2,\"led_r\":255,\"led_g\":100,\"leg_b\":50,\"led_w\":180,\"servo_1\":45,\"servo_2\":90,\"LinearActuator\":512}";
-const char json3[] = "{\"mode\":3,\"led_r\":0,\"led_g\":255,\"leg_b\":128,\"led_w\":200,\"servo_1\":180,\"servo_2\":0,\"LinearActuator\":1024}";
+const char json1[] = "{\"mode\":1,\"led_r\":120,\"led_g\":45,\"led_b\":200,\"led_w\":75,\"servo_1\":90,\"servo_2\":135,\"LinearActuator\":300}";
+const char json2[] = "{\"mode\":2,\"led_r\":255,\"led_g\":100,\"led_b\":50,\"led_w\":180,\"servo_1\":45,\"servo_2\":90,\"LinearActuator\":512}";
+const char json3[] = "{\"mode\":3,\"led_r\":0,\"led_g\":255,\"led_b\":128,\"led_w\":200,\"servo_1\":180,\"servo_2\":0,\"LinearActuator\":1024}";
 
 // JSON 문자열을 ModeData 구조체로 파싱 (통일된 키 사용)
 void parseJsonToStruct(const char* json, ModeData &data) {
@@ -140,7 +140,7 @@ void parseJsonToStruct(const char* json, ModeData &data) {
   data.mode = doc["mode"];
   data.led_r = doc["led_r"];
   data.led_g = doc["led_g"];
-  data.leg_b = doc["leg_b"];  // 통일된 키
+  data.led_b = doc["led_b"];  // 통일된 키
   data.led_w = doc["led_w"];
   data.servo_1 = doc["servo_1"];
   data.servo_2 = doc["servo_2"];
@@ -153,7 +153,7 @@ void printBinaryData(const ModeData &data) {
   Serial.print(data.mode, HEX); Serial.print(" ");
   Serial.print(data.led_r, HEX); Serial.print(" ");
   Serial.print(data.led_g, HEX); Serial.print(" ");
-  Serial.print(data.leg_b, HEX); Serial.print(" ");
+  Serial.print(data.led_b, HEX); Serial.print(" ");
   Serial.print(data.led_w, HEX); Serial.print(" ");
   Serial.print(data.servo_1, HEX); Serial.print(" ");
   Serial.print(data.servo_2, HEX); Serial.print(" ");
@@ -214,7 +214,7 @@ void loop() {
         Serial.print("Mode: "); Serial.println(myData.mode);
         Serial.print("led_r:"); Serial.println(myData.led_r);
         Serial.print("led_g:"); Serial.println(myData.led_g);
-        Serial.print("led_b:"); Serial.println(myData.leg_b);
+        Serial.print("led_b:"); Serial.println(myData.led_b);
         Serial.print("servo_1:"); Serial.println(myData.servo_1);
         Serial.print("servo_2:"); Serial.println(myData.servo_2);
         Serial.print("LinearActuator:"); Serial.println(myData.LinearActuator);
@@ -229,7 +229,7 @@ void loop() {
         Serial.print("Mode: "); Serial.println(myData.mode);
         Serial.print("led_r: "); Serial.println(myData.led_r);
         Serial.print("led_g: "); Serial.println(myData.led_g);
-        Serial.print("led_b: "); Serial.println(myData.leg_b);
+        Serial.print("led_b: "); Serial.println(myData.led_b);
         Serial.print("servo_1: "); Serial.println(myData.servo_1);
         Serial.print("servo_2: "); Serial.println(myData.servo_2);
         Serial.print("LinearActuator: "); Serial.println(myData.LinearActuator);
@@ -244,7 +244,7 @@ void loop() {
         Serial.print("Mode: "); Serial.println(myData.mode);
         Serial.print("led_r: "); Serial.println(myData.led_r);
         Serial.print("led_g: "); Serial.println(myData.led_g);
-        Serial.print("led_b: "); Serial.println(myData.leg_b);
+        Serial.print("led_b: "); Serial.println(myData.led_b);
         Serial.print("servo_1: "); Serial.println(myData.servo_1);
         Serial.print("servo_2: "); Serial.println(myData.servo_2);
         Serial.print("LinearActuator: "); Serial.println(myData.LinearActuator);
@@ -276,20 +276,20 @@ void loop() {
     } else {
       int newLedR = doc["led_r"];
       int newLedG = doc["led_g"];
-      int newLegB = doc["leg_b"];
+      int newledB = doc["led_b"];
       newLedR = constrain(newLedR, 0, max_brightness);
       newLedG = constrain(newLedG, 0, max_brightness);
-      newLegB = constrain(newLegB, 0, max_brightness);
+      newledB = constrain(newledB, 0, max_brightness);
       led_r = newLedR;
       led_g = newLedG;
-      leg_b = newLegB;
+      led_b = newledB;
       for (int i = 0; i < NUM_LEDS; i++) {
-        ring.setPixelColor(i, ring.Color(led_r, led_g, leg_b));
+        ring.setPixelColor(i, ring.Color(led_r, led_g, led_b));
       }
       ring.show();
       Serial.print("led_r: "); Serial.println(led_r);
       Serial.print("led_g: "); Serial.println(led_g);
-      Serial.print("leg_b: "); Serial.println(leg_b);
+      Serial.print("led_b: "); Serial.println(led_b);
       sendLEDStatus();
     }
   }
@@ -300,7 +300,7 @@ void loop() {
       brightness += step;
       led_r = brightness;
       led_g = brightness;
-      leg_b = brightness;
+      led_b = brightness;
       if (brightness > max_brightness) brightness = max_brightness;
     }
     Serial.print("Brightness: ");
@@ -314,7 +314,7 @@ void loop() {
       brightness -= step;
       led_r = brightness;
       led_g = brightness;
-      leg_b = brightness;
+      led_b = brightness;
       if (brightness < 0) brightness = 0;
     }
     Serial.print("Brightness: ");
