@@ -15,7 +15,7 @@ const int btnServo2Down = 10;
 // 기본 값들
 int led_r = 0;
 int led_g = 0;
-int leg_b = 0;
+int led_b = 0;
 int servo1Angle = 90;
 int servo2Angle = 90;
 const int angleStep = 2;
@@ -48,7 +48,7 @@ void sendStatus() {
   StaticJsonDocument<200> doc;
   doc["led_r"] = led_r;
   doc["led_g"] = led_g;
-  doc["leg_b"] = leg_b;
+  doc["led_b"] = led_b;
   doc["servo_1"] = servo1Angle;
   doc["servo_2"] = servo2Angle;
   doc["LinearActuator"] = linearActuator;
@@ -117,8 +117,8 @@ void loop() {
         if (doc.containsKey("led_g")) {
           led_g = doc["led_g"];
         }
-        if (doc.containsKey("leg_b")) {
-          leg_b = doc["leg_b"];
+        if (doc.containsKey("led_b")) {
+          led_b = doc["led_b"];
         }
         if (doc.containsKey("LinearActuator")) {
           linearActuator = doc["LinearActuator"];
