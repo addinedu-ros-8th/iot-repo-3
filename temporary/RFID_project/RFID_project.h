@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-enum hard_ware 
+enum Static
 {
   rfid,
   led_r,
