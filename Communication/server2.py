@@ -7,30 +7,68 @@ import sys
 import select
 import termios
 import tty
+import pymysql  # MariaDB 연결을 위한 라이브러리
 
 HOST = '0.0.0.0'
-PORT = 2001
+PORT = 2005
 exit_flag = False
 
 # 클라이언트 전송 시 동기화를 위한 lock
 client_lock = threading.Lock()
 
+# MariaDB 연결 설정
+DB_HOST = 'localhost'  # 또는 DB 서버 IP
+DB_USER = 'root'  # MariaDB 사용자명
+DB_PASSWORD = '0000'  # MariaDB 비밀번호
+DB_NAME = 'ergodb'  # 데이터베이스명
+
 # Arduino 연결 시도 (ACM0, ACM1)
 ser0 = None
 ser1 = None
 try:
-    ser0 = serial.Serial('/dev/ttyACM1', 9600, timeout=1)
+    ser0 = serial.Serial('/dev/ttyACM3', 9600, timeout=1)
     time.sleep(2)
     print("Dynamic Board에 연결되었습니다. (서버에서)")
 except Exception as e:
     print("Dynamic Board 연결 오류:", e)
 
 try:
-    ser1 = serial.Serial('/dev/ttyACM2', 9600, timeout=1)
+    ser1 = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
     time.sleep(2)
     print("Static Board에 연결되었습니다. (서버에서)")
 except Exception as e:
     print("Static Board 연결 오류:", e)
+
+def insert_into_db(data):
+    """JSON 데이터를 MariaDB 'desk' 테이블에 삽입"""
+    try:
+        connection = pymysql.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_NAME,
+            charset='utf8mb4',
+            cursorclass=pymysql.cursors.DictCursor
+        )
+        with connection.cursor() as cursor:
+            sql = """
+            INSERT INTO desk (led_r, led_g, led_b, servo_1, servo_2, LinearActuator)
+            VALUES (%s, %s, %s, %s, %s, %s);
+            """
+            cursor.execute(sql, (
+                data.get('led_r', 0),
+                data.get('led_g', 0),
+                data.get('led_b', 0),
+                data.get('servo_1', 0),
+                data.get('servo_2', 0),
+                data.get('LinearActuator', 0)
+            ))
+            connection.commit()
+            print("DB에 데이터 삽입 완료:", data)
+    except Exception as e:
+        print("DB 삽입 오류:", e)
+    finally:
+        connection.close()
 
 def send_to_client(conn, msg):
     """클라이언트 소켓에 안전하게 메시지 전송"""
@@ -70,6 +108,7 @@ def arduino_listener(ser, port_name, client_conn):
                     try:
                         json_data = json.loads(line)
                         print(f"Arduino 메시지 ({port_name}, JSON 파싱 성공):", json_data)
+                        insert_into_db(json_data)  # 받은 데이터를 DB에 저장
                     except json.JSONDecodeError:
                         json_data = {"arduino_data": line}
                         print(f"Arduino 메시지 ({port_name}, JSON 파싱 실패):", json_data)
@@ -110,6 +149,7 @@ def run_server():
                     try:
                         json_data = json.loads(received_message)
                         print("서버: 새로운 데이터 수신됨:", json_data)
+                        insert_into_db(json_data)  # 받은 데이터를 DB에 저장
                     except json.JSONDecodeError as e:
                         print("클라이언트 JSON 파싱 에러:", e)
                         json_data = None
