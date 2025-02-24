@@ -19,12 +19,12 @@ from qt_material import apply_stylesheet
 exit_flag = False
 
 HOST = '0.0.0.0'
-PORT = 2005
+PORT = 2000
 
 # 클라이언트 전송 시 동기화를 위한 lock
 client_lock = threading.Lock()
 
-# MariaDB 연결 설정
+# MariaDB 연결 설정 (적절히 수정)
 DB_HOST = 'localhost'
 DB_USER = 'root'
 DB_PASSWORD = '0000'
@@ -51,8 +51,27 @@ except Exception as e:
 # 서버 관련 함수들
 # ---------------------------
 def insert_into_db(data):
-    """JSON 데이터를 MariaDB 'desk' 테이블에 삽입"""
+    """
+    JSON 데이터를 MariaDB 'desk' 테이블에 삽입.
+    새로운 프로토콜 예:
+    {
+      "function_code": "CMD001",
+      "mode": "AUTO",
+      "desk_status": "ACTIVE",
+      "brightness": 200,
+      "monitor_height": 40,
+      "monitor_tilt": 15,
+      "desk_height": 75,
+      "request_id": "REQ20250225123456",
+      "timestamp": "2025-02-25T12:34:56Z"
+    }
+    """
     try:
+        brightness = data.get('brightness', 0)
+        monitor_height = data.get('monitor_height', 0)
+        monitor_tilt = data.get('monitor_tilt', 0)
+        desk_height = data.get('desk_height', 0)
+
         connection = pymysql.connect(
             host=DB_HOST,
             user=DB_USER,
@@ -62,24 +81,22 @@ def insert_into_db(data):
             cursorclass=pymysql.cursors.DictCursor
         )
         with connection.cursor() as cursor:
+            # desk 테이블에 brightness, monitor_height, monitor_tilt, desk_height 컬럼을 삽입
+            # 필요에 따라 function_code, mode, desk_status, request_id, timestamp 등의 컬럼도 추가할 수 있습니다.
             sql = """
-            INSERT INTO desk (led_r, led_g, led_b, servo_1, servo_2, LinearActuator)
-            VALUES (%s, %s, %s, %s, %s, %s);
+            INSERT INTO desk (brightness, monitor_height, monitor_tilt, desk_height)
+            VALUES (%s, %s, %s, %s);
             """
             cursor.execute(sql, (
-                data.get('led_r', 0),
-                data.get('led_g', 0),
-                data.get('led_b', 0),
-                data.get('servo_1', 0),
-                data.get('servo_2', 0),
-                data.get('LinearActuator', 0)
+                brightness,
+                monitor_height,
+                monitor_tilt,
+                desk_height
             ))
             connection.commit()
             print("DB에 데이터 삽입 완료:", data)
     except Exception as e:
         print("DB 삽입 오류:", e)
-    finally:
-        connection.close()
 
 def send_to_client(conn, msg):
     """클라이언트 소켓에 안전하게 메시지 전송"""
@@ -108,7 +125,21 @@ def keyboard_listener():
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
 def arduino_listener(ser, port_name, client_conn):
-    """각 Arduino 보드의 시리얼 데이터를 처리"""
+    """
+    각 Arduino 보드의 시리얼 데이터를 처리.
+    새로운 프로토콜 형태의 JSON이 들어온다고 가정:
+    {
+      "function_code": "CMD001",
+      "mode": "AUTO",
+      "desk_status": "ACTIVE",
+      "brightness": 200,
+      "monitor_height": 40,
+      "monitor_tilt": 15,
+      "desk_height": 75,
+      "request_id": "arduino_board",
+      "timestamp": "2025-02-25T12:34:56Z"
+    }
+    """
     if not ser:
         return
     while not exit_flag:
@@ -118,12 +149,17 @@ def arduino_listener(ser, port_name, client_conn):
                 if line:
                     print(f"Arduino 메시지 ({port_name}, 원본):", line)
                     try:
+                        # JSON 파싱 시도
                         json_data = json.loads(line)
                         print(f"Arduino 메시지 ({port_name}, JSON 파싱 성공):", json_data)
+                        # DB 저장
                         insert_into_db(json_data)
                     except json.JSONDecodeError:
+                        # 파싱 실패 시 임의 구조로 처리
                         json_data = {"arduino_data": line}
                         print(f"Arduino 메시지 ({port_name}, JSON 파싱 실패):", json_data)
+
+                    # 클라이언트에게도 전송
                     try:
                         msg = json.dumps(json_data, separators=(',', ':'))
                         send_to_client(client_conn, msg)
@@ -136,8 +172,7 @@ def arduino_listener(ser, port_name, client_conn):
             break
 
 def run_server():
-    """서버 소켓 실행 및 클라이언트/시리얼 통신 처리"""
-    global exit_flag
+    print("서버 스레드 시작됨", flush=True)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
         server_socket.bind((HOST, PORT))
         server_socket.listen(1)
@@ -162,6 +197,7 @@ def run_server():
                 threading.Thread(target=arduino_listener, args=(ser0, 'ACM0', conn), daemon=True).start()
             if ser1:
                 threading.Thread(target=arduino_listener, args=(ser1, 'ACM1', conn), daemon=True).start()
+
             while not exit_flag:
                 try:
                     data = conn.recv(1024)
@@ -173,11 +209,14 @@ def run_server():
                     try:
                         json_data = json.loads(received_message)
                         print("서버: 새로운 데이터 수신됨:", json_data)
+                        # DB 저장
                         insert_into_db(json_data)
                     except json.JSONDecodeError as e:
                         print("클라이언트 JSON 파싱 에러:", e)
                         json_data = None
+
                     if json_data is not None:
+                        # Arduino로도 전달 (동일 프로토콜 구조라고 가정)
                         message_to_arduino = json.dumps(json_data, separators=(',', ':')) + "\n"
                         if ser0:
                             ser0.write(message_to_arduino.encode('utf-8'))
@@ -185,10 +224,16 @@ def run_server():
                         if ser1:
                             ser1.write(message_to_arduino.encode('utf-8'))
                             print("Arduino (ACM1)로 전송:", message_to_arduino)
-                    response = {"status": "ok", "received": json_data, "message": "성공"}
-                    response_str = json.dumps(response, separators=(',', ':'))
-                    send_to_client(conn, response_str)
-                    print("클라이언트로 응답 전송:", response_str)
+
+                        # 클라이언트에 응답 (간단히 status: ok)
+                        response = {
+                            "status": "ok",
+                            "received": json_data,
+                            "message": "성공"
+                        }
+                        response_str = json.dumps(response, separators=(',', ':'))
+                        send_to_client(conn, response_str)
+                        print("클라이언트로 응답 전송:", response_str)
                 except socket.timeout:
                     continue
                 except Exception as e:
