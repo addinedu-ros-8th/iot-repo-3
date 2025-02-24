@@ -9,22 +9,25 @@ from qt_material import apply_stylesheet  # pip install qt_material 설치
 # QThread를 이용한 소켓 클라이언트 구현
 # ─────────────────────────────────────────
 class SocketClientThread(QThread):
-    newMessage = pyqtSignal(dict)  # 수신한 JSON 메시지를 전달하는 시그널
-
+    newMessage = pyqtSignal(dict)
+    
     def __init__(self, host, port, parent=None):
         super().__init__(parent)
-        self.host = '192.168.0.49'
-        self.port = 2012
+        self.host = host
+        self.port = port
         self.running = True
         self.sock = None
+        self.connected = False  # 연결 상태 플래그 추가
 
     def run(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             self.sock.connect((self.host, self.port))
+            self.connected = True  # 연결 성공 시 플래그 True
             print("서버에 연결되었습니다. (GUI 클라이언트)")
         except Exception as e:
             print("서버 연결 실패:", e)
+            self.connected = False
             return
 
         while self.running:
@@ -32,6 +35,7 @@ class SocketClientThread(QThread):
                 data = self.sock.recv(1024)
                 if not data:
                     print("서버가 연결을 종료했습니다.")
+                    self.connected = False
                     break
                 message = data.decode('utf-8')
                 try:
@@ -41,11 +45,15 @@ class SocketClientThread(QThread):
                     print("수신된 메시지 (문자열):", message)
             except Exception as e:
                 print("수신 오류:", e)
+                self.connected = False
                 break
 
         self.sock.close()
 
     def send_data(self, data):
+        if not self.connected or self.sock is None or self.sock.fileno() == -1:
+            print("소켓이 연결되어 있지 않습니다. 데이터를 전송할 수 없습니다.")
+            return
         try:
             json_str = json.dumps(data, separators=(',', ':'))
             self.sock.sendall(json_str.encode('utf-8'))
@@ -59,6 +67,7 @@ class SocketClientThread(QThread):
             self.sock.close()
         self.quit()
         self.wait()
+
 
 
 # ─────────────────────────────────────────
@@ -347,7 +356,7 @@ class MainWindow(QMainWindow):
         self.btn_save_in_mode.clicked.connect(self.go_save_in_mode_page)
         self.btn_log_data.clicked.connect(self.show_log_data_window)
 
-        self.client_thread = SocketClientThread('192.168.0.49', 2012)
+        self.client_thread = SocketClientThread('172.30.1.73', 2006)
         self.client_thread.newMessage.connect(self.handle_new_message)
         self.client_thread.start()
 
