@@ -13,8 +13,8 @@ class SocketClientThread(QThread):
 
     def __init__(self, host, port, parent=None):
         super().__init__(parent)
-        self.host = '192.168.0.45'
-        self.port = 8978
+        self.host = '192.168.0.49'
+        self.port = 2012
         self.running = True
         self.sock = None
 
@@ -347,7 +347,7 @@ class MainWindow(QMainWindow):
         self.btn_save_in_mode.clicked.connect(self.go_save_in_mode_page)
         self.btn_log_data.clicked.connect(self.show_log_data_window)
 
-        self.client_thread = SocketClientThread('192.168.0.45', 1234)
+        self.client_thread = SocketClientThread('192.168.0.49', 2012)
         self.client_thread.newMessage.connect(self.handle_new_message)
         self.client_thread.start()
 
