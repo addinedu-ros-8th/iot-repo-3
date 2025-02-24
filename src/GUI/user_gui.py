@@ -1,6 +1,7 @@
 import sys
 import socket
 import json
+from datetime import datetime
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from qt_material import apply_stylesheet  # pip install qt_material 설치
@@ -67,7 +68,6 @@ class SocketClientThread(QThread):
             self.sock.close()
         self.quit()
         self.wait()
-
 
 
 # ─────────────────────────────────────────
@@ -255,8 +255,8 @@ class MainWindow(QMainWindow):
         value_layout.addWidget(self.label_brightness_title, 0, 0)
         value_layout.addWidget(self.spin_brightness, 0, 1)
 
-        # Desk
-        self.label_desk_title = QLabel("DESK:")
+        # Desk (Desk Height)
+        self.label_desk_title = QLabel("Desk Height:")
         self.label_desk_title.setStyleSheet("font-size: 24pt;")
         self.spin_desk_height = QSpinBox()
         self.spin_desk_height.setStyleSheet("font-size: 24pt;")
@@ -266,14 +266,14 @@ class MainWindow(QMainWindow):
         value_layout.addWidget(self.spin_desk_height, 1, 1)
 
         # Monitor
-        self.label_monitor_title = QLabel("MONITOR:")
+        self.label_monitor_title = QLabel("Monitor Height:")
         self.label_monitor_title.setStyleSheet("font-size: 24pt;")
         self.spin_monitor_height = QSpinBox()
         self.spin_monitor_height.setStyleSheet("font-size: 24pt;")
         self.spin_monitor_height.setRange(0, 90)
         self.spin_monitor_height.setValue(self.currentValues["MonitorHeight"])
 
-        self.label_monitor_angle_title = QLabel("Angle:")
+        self.label_monitor_angle_title = QLabel("Monitor Tilt:")
         self.label_monitor_angle_title.setStyleSheet("font-size: 24pt;")
         self.spin_monitor_angle = QSpinBox()
         self.spin_monitor_angle.setStyleSheet("font-size: 24pt;")
@@ -409,23 +409,41 @@ class MainWindow(QMainWindow):
         self.hide()
 
     def send_current_values(self):
+        # 새 데이터 형식에 맞게 전송:
+        # {
+        #   "function_code": "CMD001",
+        #   "mode": "AUTO",
+        #   "desk_status": "ACTIVE",
+        #   "brightness": <value>,
+        #   "monitor_height": <value>,
+        #   "monitor_tilt": <value>,
+        #   "desk_height": <value>,
+        #   "request_id": "desk_gui",
+        #   "timestamp": "<ISO8601 timestamp>"
+        # }
         data = {
-            "Brightness": self.currentValues["Brightness"],
-            "Linear Actuator": self.currentValues["DeskHeight"],
-            "MonitorHeight": self.currentValues["MonitorHeight"],
-            "MonitorAngle": self.currentValues["MonitorAngle"]
+            "function_code": "CMD001",
+            "mode": "AUTO",
+            "desk_status": "ACTIVE",
+            "brightness": self.currentValues["Brightness"],
+            "monitor_height": self.currentValues["MonitorHeight"],
+            "monitor_tilt": self.currentValues["MonitorAngle"],
+            "desk_height": self.currentValues["DeskHeight"],
+            "request_id": "desk_gui",
+            "timestamp": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
         }
         self.client_thread.send_data(data)
 
     def handle_new_message(self, msg):
-        if "Brightness" in msg:
-            self.currentValues["Brightness"] = msg["Brightness"]
-        if "Linear Actuator" in msg:
-            self.currentValues["DeskHeight"] = msg["Linear Actuator"]
-        if "MonitorHeight" in msg:
-            self.currentValues["MonitorHeight"] = msg["MonitorHeight"]
-        if "MonitorAngle" in msg:
-            self.currentValues["MonitorAngle"] = msg["MonitorAngle"]
+        # 메시지에서 새로운 데이터 형식에 맞게 값 업데이트
+        if "brightness" in msg:
+            self.currentValues["Brightness"] = msg["brightness"]
+        if "desk_height" in msg:
+            self.currentValues["DeskHeight"] = msg["desk_height"]
+        if "monitor_height" in msg:
+            self.currentValues["MonitorHeight"] = msg["monitor_height"]
+        if "monitor_tilt" in msg:
+            self.currentValues["MonitorAngle"] = msg["monitor_tilt"]
         self.update_spinboxes()
 
     def closeEvent(self, event):
