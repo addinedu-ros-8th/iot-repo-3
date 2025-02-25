@@ -6,7 +6,7 @@ Servo servo1;
 Servo servo2;
 
 #define servo1Pin A0
-#define servo2Pin A1
+#define servo2Pin 3
 const int btnServo1Up   = 13;
 const int btnServo1Down = 12;
 const int btnServo2Up   = 11;
