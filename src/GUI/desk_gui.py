@@ -19,7 +19,7 @@ from qt_material import apply_stylesheet
 exit_flag = False
 
 HOST = '0.0.0.0'
-PORT = 2000
+PORT = 2005
 
 # 클라이언트 전송 시 동기화를 위한 lock
 client_lock = threading.Lock()
@@ -34,7 +34,7 @@ DB_NAME = 'ergodb'
 ser0 = None
 ser1 = None
 try:
-    ser0 = serial.Serial('/dev/ttyACM3', 9600, timeout=1)
+    ser0 = serial.Serial('/dev/ttyACM1', 9600, timeout=1)
     time.sleep(2)
     print("Dynamic Board에 연결되었습니다. (서버에서)")
 except Exception as e:
@@ -53,24 +53,23 @@ except Exception as e:
 def insert_into_db(data):
     """
     JSON 데이터를 MariaDB 'desk' 테이블에 삽입.
-    새로운 프로토콜 예:
+    새 프로토콜:
     {
       "function_code": "CMD001",
-      "mode": "AUTO",
-      "desk_status": "ACTIVE",
-      "brightness": 200,
-      "monitor_height": 40,
-      "monitor_tilt": 15,
-      "desk_height": 75,
-      "request_id": "REQ20250225123456",
-      "timestamp": "2025-02-25T12:34:56Z"
+      "mode": <number>,
+      "brightness": <value>,
+      "servo_1": <value>,          # Monitor Height
+      "servo_2": <value>,          # Monitor Tilt
+      "LinearActuator": <value>,   # Desk Height
+      "request_id": <string>,
+      "timestamp": "<ISO8601 timestamp>"
     }
     """
     try:
         brightness = data.get('brightness', 0)
-        monitor_height = data.get('monitor_height', 0)
-        monitor_tilt = data.get('monitor_tilt', 0)
-        desk_height = data.get('desk_height', 0)
+        servo_1 = data.get('servo_1', 0)
+        servo_2 = data.get('servo_2', 0)
+        LinearActuator = data.get('LinearActuator', 0)
 
         connection = pymysql.connect(
             host=DB_HOST,
@@ -81,22 +80,21 @@ def insert_into_db(data):
             cursorclass=pymysql.cursors.DictCursor
         )
         with connection.cursor() as cursor:
-            # desk 테이블에 brightness, monitor_height, monitor_tilt, desk_height 컬럼을 삽입
-            # 필요에 따라 function_code, mode, desk_status, request_id, timestamp 등의 컬럼도 추가할 수 있습니다.
             sql = """
-            INSERT INTO desk (brightness, monitor_height, monitor_tilt, desk_height)
+            INSERT INTO desk (brightness, servo_1, servo_2, LinearActuator)
             VALUES (%s, %s, %s, %s);
             """
             cursor.execute(sql, (
                 brightness,
-                monitor_height,
-                monitor_tilt,
-                desk_height
+                servo_1,
+                servo_2,
+                LinearActuator
             ))
             connection.commit()
             print("DB에 데이터 삽입 완료:", data)
     except Exception as e:
         print("DB 삽입 오류:", e)
+
 
 def send_to_client(conn, msg):
     """클라이언트 소켓에 안전하게 메시지 전송"""
