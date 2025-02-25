@@ -53,25 +53,53 @@ except Exception as e:
 # ---------------------------
 def insert_into_db(data):
     """
-    JSON 데이터를 MariaDB 'desk' 테이블에 삽입.
-    새 프로토콜:
-    {
-      "function_code": "CMD001",
-      "mode": <number>,
-      "brightness": <value>,
-      "servo_1": <value>,          # Monitor Height
-      "servo_2": <value>,          # Monitor Tilt
-      "LinearActuator": <value>,   # Desk Height
-      "request_id": <string>,
-      "timestamp": "<ISO8601 timestamp>"
-    }
+    JSON 데이터를 새 프로토콜에 맞게 MariaDB의 desk_info, log 테이블에 삽입.
+    desk_info 테이블:
+        light, desk_status, monitor_height, monitor_angle, desk_height
+    log 테이블:
+        user_id, function_code, mode, desk_info_id, request_id, timestamp
     """
     try:
-        brightness = data.get('brightness', 0)
-        servo_1 = data.get('servo_1', 0)
-        servo_2 = data.get('servo_2', 0)
-        LinearActuator = data.get('LinearActuator', 0)
-
+        # desk_info 테이블에 삽입할 데이터 추출
+        light = data.get('brightness', 0)
+        desk_status_str = data.get('desk_status', "INACTIVE")
+        desk_status = 1 if str(desk_status_str).upper() == "ACTIVE" else 0
+        monitor_height = data.get('monitor_height', 0)
+        monitor_angle = data.get('monitor_tilt', 0)  # monitor_tilt 값을 monitor_angle으로 사용
+        desk_height = data.get('desk_height', 0)
+        
+        # log 테이블에 삽입할 데이터 추출
+        # function_code: 예) "CMD001"에서 숫자만 추출하여 정수형으로 변환
+        function_code_str = data.get('function_code', '0')
+        function_code = int(''.join(filter(str.isdigit, function_code_str))) if any(c.isdigit() for c in function_code_str) else 0
+        
+        # mode: 문자열이면 매핑, 숫자면 그대로 사용
+        mode_val = data.get('mode', 0)
+        if isinstance(mode_val, str):
+            if mode_val.upper() == "AUTO":
+                mode = 1
+            elif mode_val.upper() == "MANUAL":
+                mode = 2
+            else:
+                mode = 0
+        else:
+            mode = mode_val
+        
+        user_id = 1  # 기본 사용자 id (실제 상황에 맞게 수정 필요)
+        
+        request_id_str = data.get('request_id', '0')
+        try:
+            request_id = int(request_id_str)
+        except ValueError:
+            request_id = 0
+        
+        # timestamp 처리: ISO8601 형식 "YYYY-MM-DDTHH:MM:SSZ" → "YYYY-MM-DD HH:MM:SS"
+        timestamp_str = data.get('timestamp')
+        if timestamp_str:
+            timestamp = timestamp_str.replace('T', ' ').replace('Z', '')
+        else:
+            timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        
         connection = pymysql.connect(
             host=DB_HOST,
             user=DB_USER,
@@ -80,21 +108,29 @@ def insert_into_db(data):
             charset='utf8mb4',
             cursorclass=pymysql.cursors.DictCursor
         )
+        
         with connection.cursor() as cursor:
-            sql = """
-            INSERT INTO desk (brightness, servo_1, servo_2, LinearActuator)
-            VALUES (%s, %s, %s, %s);
+            # desk_info 테이블에 데이터 삽입
+            sql_desk_info = """
+            INSERT INTO desk_info (light, desk_status, monitor_height, monitor_angle, desk_height)
+            VALUES (%s, %s, %s, %s, %s)
             """
-            cursor.execute(sql, (
-                brightness,
-                servo_1,
-                servo_2,
-                LinearActuator
-            ))
+            cursor.execute(sql_desk_info, (light, desk_status, monitor_height, monitor_angle, desk_height))
+            desk_info_id = cursor.lastrowid
+            
+            # log 테이블에 데이터 삽입
+            sql_log = """
+            INSERT INTO log (user_id, function_code, mode, desk_info_id, request_id, timestamp)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """
+            cursor.execute(sql_log, (user_id, function_code, mode, desk_info_id, request_id, timestamp))
+            
             connection.commit()
             print("DB에 데이터 삽입 완료:", data)
+            
     except Exception as e:
         print("DB 삽입 오류:", e)
+
 
 def send_to_client(conn, msg):
     """클라이언트 소켓에 안전하게 메시지 전송"""
