@@ -17,9 +17,10 @@ from qt_material import apply_stylesheet
 # 글로벌 변수 및 설정
 # ---------------------------
 exit_flag = False
+client_conn = None  # 클라이언트 소켓 전역 변수
 
 HOST = '0.0.0.0'
-PORT = 2005
+PORT = 2007
 
 # 클라이언트 전송 시 동기화를 위한 lock
 client_lock = threading.Lock()
@@ -48,7 +49,7 @@ except Exception as e:
     print("Static Board 연결 오류:", e)
 
 # ---------------------------
-# 서버 관련 함수들
+# 공통 함수: DB 삽입, 클라이언트 전송, 명령 전송
 # ---------------------------
 def insert_into_db(data):
     """
@@ -95,7 +96,6 @@ def insert_into_db(data):
     except Exception as e:
         print("DB 삽입 오류:", e)
 
-
 def send_to_client(conn, msg):
     """클라이언트 소켓에 안전하게 메시지 전송"""
     try:
@@ -103,6 +103,19 @@ def send_to_client(conn, msg):
             conn.sendall(msg.encode('utf-8'))
     except Exception as e:
         print("클라이언트 전송 오류:", e)
+
+def send_command(data):
+    """전역 client_conn을 사용해 명령 메시지 전송"""
+    global client_conn
+    if client_conn:
+        try:
+            msg = json.dumps(data, separators=(',', ':')) + "\n"
+            send_to_client(client_conn, msg)
+            print("명령 전송:", msg)
+        except Exception as e:
+            print("명령 전송 중 오류:", e)
+    else:
+        print("클라이언트 연결 없음. 명령 전송 실패.")
 
 def keyboard_listener():
     """키보드(ESC 키) 입력 감지: 필요시 사용 (현재는 GUI 창 종료로 대체 가능)"""
@@ -170,6 +183,7 @@ def arduino_listener(ser, port_name, client_conn):
             break
 
 def run_server():
+    global client_conn
     print("서버 스레드 시작됨", flush=True)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
         server_socket.bind((HOST, PORT))
@@ -181,6 +195,7 @@ def run_server():
         while not exit_flag:
             try:
                 conn, addr = server_socket.accept()
+                client_conn = conn  # 전역에 저장
                 break
             except socket.timeout:
                 continue
@@ -328,16 +343,33 @@ class LEDControlScreen(QWidget):
         if self.brightness < 9:
             self.brightness += 1
             self.brightness_label.setText(str(self.brightness))
+            self.send_led_command()
 
     def decrease_brightness(self):
         if self.brightness > 0:
             self.brightness -= 1
             self.brightness_label.setText(str(self.brightness))
+            self.send_led_command()
+
+    def send_led_command(self):
+        data = {
+            "function_code": "CMD001",
+            "mode": "AUTO",
+            "desk_status": "ACTIVE",
+            "brightness": self.brightness,
+            "monitor_height": 0,
+            "monitor_tilt": 0,
+            "desk_height": 0,
+            "request_id": "desk_gui",
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        }
+        send_command(data)
 
 class DeskControlScreen(QWidget):
     def __init__(self, stacked_widget):
         super().__init__()
         self.stacked_widget = stacked_widget
+        self.desk_height = 0  # 현재 책상 높이 상태 변수
         layout = QVBoxLayout()
         self.label = QLabel("Desk Control")
         self.label.setAlignment(Qt.AlignCenter)
@@ -348,6 +380,8 @@ class DeskControlScreen(QWidget):
         btn_down = QPushButton("▼")
         btn_up.setFixedSize(120, 120)
         btn_down.setFixedSize(120, 120)
+        btn_up.clicked.connect(self.increase_desk_height)
+        btn_down.clicked.connect(self.decrease_desk_height)
         grid_layout.addWidget(btn_up, 0, 1)
         grid_layout.addWidget(btn_down, 2, 1)
         layout.addLayout(grid_layout)
@@ -358,10 +392,36 @@ class DeskControlScreen(QWidget):
         layout.addWidget(back_btn, alignment=Qt.AlignCenter)
         self.setLayout(layout)
     
+    def increase_desk_height(self):
+        if self.desk_height < 100:
+            self.desk_height += 5
+            self.send_desk_command()
+    
+    def decrease_desk_height(self):
+        if self.desk_height > 0:
+            self.desk_height -= 5
+            self.send_desk_command()
+    
+    def send_desk_command(self):
+        data = {
+            "function_code": "CMD001",
+            "mode": "AUTO",
+            "desk_status": "ACTIVE",
+            "brightness": 0,
+            "monitor_height": 0,
+            "monitor_tilt": 0,
+            "desk_height": self.desk_height,
+            "request_id": "desk_gui",
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        }
+        send_command(data)
+    
 class MonitorControlScreen(QWidget):
     def __init__(self, stacked_widget):
         super().__init__()
         self.stacked_widget = stacked_widget
+        self.monitor_height = 30
+        self.monitor_tilt = 45
         layout = QVBoxLayout()
         self.label = QLabel("Monitor Control")
         self.label.setAlignment(Qt.AlignCenter)
@@ -376,6 +436,10 @@ class MonitorControlScreen(QWidget):
         btn_back.setFixedSize(100, 100)
         btn_up.setFixedSize(100, 100)
         btn_down.setFixedSize(100, 100)
+        btn_front.clicked.connect(self.set_front)
+        btn_back.clicked.connect(self.set_back)
+        btn_up.clicked.connect(self.increase_monitor_height)
+        btn_down.clicked.connect(self.decrease_monitor_height)
         grid_layout.addWidget(btn_front, 0, 0)
         grid_layout.addWidget(btn_back, 1, 0)
         grid_layout.addWidget(btn_up, 0, 1)
@@ -387,6 +451,42 @@ class MonitorControlScreen(QWidget):
         back_btn.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(1))
         layout.addWidget(back_btn, alignment=Qt.AlignCenter)
         self.setLayout(layout)
+        
+    def increase_monitor_height(self):
+        if self.monitor_height < 90:
+            self.monitor_height += 5
+            self.send_monitor_command()
+    
+    def decrease_monitor_height(self):
+        if self.monitor_height > 0:
+            self.monitor_height -= 5
+            self.send_monitor_command()
+    
+    def set_front(self):
+        # Front: 모니터 기울기를 감소
+        if self.monitor_tilt > 0:
+            self.monitor_tilt -= 5
+            self.send_monitor_command()
+    
+    def set_back(self):
+        # Back: 모니터 기울기를 증가
+        if self.monitor_tilt < 90:
+            self.monitor_tilt += 5
+            self.send_monitor_command()
+    
+    def send_monitor_command(self):
+        data = {
+            "function_code": "CMD001",
+            "mode": "AUTO",
+            "desk_status": "ACTIVE",
+            "brightness": 0,
+            "monitor_height": self.monitor_height,
+            "monitor_tilt": self.monitor_tilt,
+            "desk_height": 0,
+            "request_id": "desk_gui",
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        }
+        send_command(data)
         
 class MainWindow(QWidget):
     def __init__(self):
