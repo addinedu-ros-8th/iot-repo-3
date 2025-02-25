@@ -17,10 +17,10 @@ Team 3. DeskMate(IOT Project)
 ## :sparkles: 구성원 및 역할
 |구성원|역할|
 |-----|-----|
-|이정림(팀장)|프로젝트 관리<br>Jira 관리<br>desk GUI 설계<br>RFID : 사용자 인증, 커스텀 모드<br>무선 충전<br>GitHub 정리|
-|심채훈|기구 설계<br>DB 설계<br>책상 높이 제어<br>TCP/IP 통신<br>Desk GUI 구현|
-|이우재|기구 설계<br>DB 설계<br>DB 관리<br>모니터 제어<br>Serial 통신<br>발표|
-|권 빛|user GUI 설계<br>user GUI 구현<br>LED 제어<br>PPT 제작|
+|이정림(팀장)|프로젝트 관리<br>Jira 관리<br>desk GUI 설계<br>RFID : 사용자 인증, 커스텀 모드<br>user GUI 구현<br>tcp/ip 통신<br>Serial 통신|
+|심채훈|기구 설계<br>DB 설계<br>책상 높이 제어<br>Serial 통신<br>TCP/IP 통신<br>Desk GUI 구현|
+|이우재|기구 설계<br>DB 설계<br>DB 관리<br>모니터 제어<br>server 구현<br>발표|
+|권 빛|user GUI 설계<br>user GUI 구현<br>LED 제어<br>PPT 제작<br>GitHub 정리|
 
 ***
 ## :hourglass_flowing_sand: 프로젝트 설계 및 개발 계획
