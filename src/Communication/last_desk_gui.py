@@ -310,22 +310,33 @@ class MainWindow(QWidget):
 
         # 각 모드에 따라 제어 동작 수행
         if mode == 1:
-            # Mode 1: LED 제어 화면 업데이트
+            # Mode 1: LED 제어 - static_board에 LED 밝기 값을 전송
             self.led_control_screen.update_brightness(brightness_val)
-            print("RFID Mode 1: LED 밝기를", brightness_val, "로 업데이트")
+            # 기존: header 0xFF와 LED 밝기 값을 패킹한 2바이트 패킷 전송
+            packet = struct.pack('BB', 0xFF, brightness_val)
+            self.serial_reader2.write_command(packet)
+            print("RFID Mode 1: LED 밝기를", brightness_val, "로 업데이트 및 전송")
         elif mode == 2:
-            # Mode 2: Desk 제어 화면 업데이트
+            # Mode 2: Desk 제어 - dynamic_board에 책상 높이 값을 전송
             self.desk_control_screen.data_value_label.setText(str(desk_height_val))
-            print("RFID Mode 2: Desk 높이를", desk_height_val, "로 업데이트")
+            # 예시로 새로운 헤더 0xFE를 사용하여 책상 높이 제어 명령 전송
+            packet = struct.pack('BB', 0xFE, desk_height_val)
+            self.serial_reader1.write_command(packet)
+            print("RFID Mode 2: Desk 높이를", desk_height_val, "로 업데이트 및 전송")
         elif mode == 3:
-            # Mode 3: Monitor 제어 화면 업데이트
+            # Mode 3: Monitor 제어 - dynamic_board에 모니터 높이와 기울기 값을 전송
             self.monitor_control_screen.data_label_front_back.setText(str(monitor_tilt))
             self.monitor_control_screen.data_label_up_down.setText(str(monitor_height))
-            print("RFID Mode 3: Monitor 값", monitor_height, "/", monitor_tilt, "로 업데이트")
+            # 예시로 모니터 높이와 기울기를 제어하는 새로운 명령 헤더 사용 (0xF9, 0xF8)
+            packet_height = struct.pack('BB', 0xF9, monitor_height)
+            packet_tilt = struct.pack('BB', 0xF8, monitor_tilt)
+            self.serial_reader1.write_command(packet_height)
+            self.serial_reader1.write_command(packet_tilt)
+            print("RFID Mode 3: Monitor 값", monitor_height, "/", monitor_tilt, "로 업데이트 및 전송")
         else:
             print("RFID Mode 데이터: 정의되지 않은 모드", mode)
 
-        # MainScreen 라벨에도 업데이트 내용 추가 표시
+        # 기존 UI 업데이트: MainScreen의 레이블에 RFID 데이터를 추가 표시
         current_text = self.main_screen.label.text()
         new_text = current_text + "\n" + data_str
         self.main_screen.label.setText(new_text)
