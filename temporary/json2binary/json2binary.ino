@@ -15,10 +15,17 @@ struct ModeData {
   uint8_t brightness;
   uint8_t monitor_height;
   uint8_t monitor_tilt;
-  uint16_t desk_height;
+  uint8_t desk_height;
+};
+
+struct CommunData {
+  uint32_t uid;
+  uint8_t function_code;
+  uint8_t data;
 };
 
 ModeData modeData1, modeData2, modeData3; // Global structs for example
+CommunData communicationData;
 
 // Global flag and storage for the active card’s UID.
 bool cardActive = false;
@@ -89,7 +96,7 @@ void printModeData(const ModeData &data) {
 // Setup
 // ---------------------------------------------------------------------
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   SPI.begin();
   rc522.PCD_Init();
   Serial.println("RFID 리더 초기화 완료.");
@@ -104,19 +111,19 @@ void setup() {
   modeData1.brightness = 10;
   modeData1.monitor_height = 20;
   modeData1.monitor_tilt = 30;
-  modeData1.desk_height = 100;
+  modeData1.desk_height = 15;
 
   modeData2.mode = 2;
   modeData2.brightness = 50;
   modeData2.monitor_height = 60;
   modeData2.monitor_tilt = 70;
-  modeData2.desk_height = 200;
+  modeData2.desk_height = 19;
 
   modeData3.mode = 3;
   modeData3.brightness = 90;
   modeData3.monitor_height = 100;
   modeData3.monitor_tilt = 110;
-  modeData3.desk_height = 300;
+  modeData3.desk_height = 13;
 }
 
 // ---------------------------------------------------------------------
@@ -129,10 +136,22 @@ void loop() {
       // Save the UID of the detected card
       memcpy(&storedUid, &rc522.uid, sizeof(rc522.uid));
       cardActive = true;
+      // Example: Assuming the UID is 4 bytes long
+      if (rc522.uid.size == 4) {
+        communicationData.uid = ((uint32_t)storedUid.uidByte[0] << 24) |
+                                ((uint32_t)storedUid.uidByte[1] << 16) |
+                                ((uint32_t)storedUid.uidByte[2] << 8)  |
+                                (uint32_t)storedUid.uidByte[3];
+      }
+      communicationData.function_code = 06;
+      communicationData.data = 1;
       Serial.println("RFID 카드 감지됨. 카드와의 세션을 유지합니다.");
       // Note: We do NOT call PICC_HaltA() or PCD_StopCrypto1() here.
     }
-  } else {
+  } esle if(if (!rc522.PICC_ReadCardSerial())){
+    communicationData.function_code = 06;
+    communicationData.data = 0;
+  }else {
     // At this point, the card is already active.
     // You may want to add a method to detect if the card has been removed.
     // For this example, we assume the card remains present.
@@ -159,6 +178,14 @@ void loop() {
 
       // Handle the command
       switch (functionCode) {
+        case 0x00: // brightness
+          modeData1.brightness = (uint8_t)controlValue;
+          Serial.print("Set brightness to: ");
+          Serial.println(modeData1.brightness);
+          communicationData.function_code = 00;
+          communicationData.data = controlValue;
+        break;
+
         case 0x04: // rfid_read
         {
           Serial.println("RFID 카드 읽기 명령.");
@@ -175,6 +202,8 @@ void loop() {
           }
           // Do not halt the card here, so the session stays active.
         }
+        communicationData.function_code = 04;
+        communicationData.data = controlValue;
         break;
 
         case 0x05: // rfid_write
@@ -192,6 +221,8 @@ void loop() {
           }
           // Do not halt the card here.
         }
+        communicationData.function_code = 05;
+        communicationData.data = controlValue;
         break;
 
         // Optional: You can add additional function codes if needed.
@@ -202,5 +233,8 @@ void loop() {
           break;
       }
     }
+  }
+  if(Serial.available()>0){
+    Serial.write((uint8_t *)&communicationData, sizeof(communicationData));
   }
 }
