@@ -10,26 +10,44 @@ from PyQt5.QtCore import *
 # GUI 코드
 # ----------------------------
 class MainScreen(QWidget):
-    def __init__(self, stacked_widget):
+    def __init__(self, stacked_widget, serial_writer):
         super().__init__()
         self.stacked_widget = stacked_widget
+        self.serial_writer = serial_writer  # static_board로 명령 전송
         layout = QVBoxLayout()
 
         self.label = QLabel("User ID : None")
         self.label.setAlignment(Qt.AlignCenter)
         layout.addWidget(self.label)
 
+        # RFID 읽기 기능을 Mode 버튼에 할당 (각 버튼마다 다른 블록 번호 사용)
         grid_layout = QGridLayout()
-        buttons = {"Mode 1": None, "Mode 2": None, "Mode 3": None, "Control Mode": 1}
+        # "Mode 1": 블록 4, "Mode 2": 블록 5, "Mode 3": 블록 6, "Control Mode": 화면 전환
+        buttons = {
+            "Mode 1": 4,
+            "Mode 2": 5,
+            "Mode 3": 6,
+            "Control Mode": None
+        }
         positions = [(0, 0), (0, 1), (1, 0), (1, 1)]
-        for (text, index), pos in zip(buttons.items(), positions):
+        for (text, block), pos in zip(buttons.items(), positions):
             btn = QPushButton(text)
             btn.setFixedSize(140, 160)
-            if index is not None:
-                btn.clicked.connect(lambda _, i=index: self.stacked_widget.setCurrentIndex(i))
+            if block is not None:
+                # RFID 읽기 명령을 전송하는 슬롯 연결 (해당 블록 번호 사용)
+                btn.clicked.connect(lambda _, b=block: self.send_rfid_read_command(b))
+            else:
+                # Control Mode는 화면 전환
+                btn.clicked.connect(lambda _, i=1: self.stacked_widget.setCurrentIndex(i))
             grid_layout.addWidget(btn, *pos)
         layout.addLayout(grid_layout)
         self.setLayout(layout)
+
+    def send_rfid_read_command(self, block):
+        # RFID 읽기 명령: 헤더 0xFD, 기능코드 0x04 (읽기), 블록번호 (4,5,6 중 하나)
+        packet = struct.pack('BBB', 0xFD, 0x04, block)
+        self.serial_writer.write_command(packet)
+        print(f"RFID Read 명령 전송: {packet} (블록 {block})")
 
 class ControlModeScreen(QWidget):
     def __init__(self, stacked_widget):
@@ -63,13 +81,12 @@ class LEDControlScreen(QWidget):
         self.label.setAlignment(Qt.AlignCenter)
         layout.addWidget(self.label)
 
-        # LED 밝기 값을 보여주는 레이아웃 구성
         data_layout = QVBoxLayout()
         self.up_btn = QPushButton("▲")
         self.up_btn.setFixedSize(80, 80)
         data_layout.addWidget(self.up_btn, alignment=Qt.AlignCenter)
 
-        self.data_value = 0  # 초기 LED 밝기 (0~7)
+        self.data_value = 0
         self.data_label = QLabel(str(self.data_value))
         self.data_label.setAlignment(Qt.AlignCenter)
         self.data_label.setFixedSize(80, 80)
@@ -87,8 +104,6 @@ class LEDControlScreen(QWidget):
         layout.addWidget(back_btn, alignment=Qt.AlignCenter)
 
         self.setLayout(layout)
-
-        # 버튼 클릭 시 LED 밝기 조절 (내부 업데이트 + static_board에 명령 전송)
         self.up_btn.clicked.connect(self.increase_data)
         self.down_btn.clicked.connect(self.decrease_data)
 
@@ -98,7 +113,6 @@ class LEDControlScreen(QWidget):
             self.data_label.setText(str(self.data_value))
             packet = struct.pack('BB', 0xFF, self.data_value)
             self.serial_writer.write_command(packet)
-            # 즉시 업데이트 후 디버깅 출력
             print(json.dumps({"desk_gui": "LED up clicked", "led_brightness": self.data_value}, indent=4))
 
     def decrease_data(self):
@@ -109,7 +123,6 @@ class LEDControlScreen(QWidget):
             self.serial_writer.write_command(packet)
             print(json.dumps({"desk_gui": "LED down clicked", "led_brightness": self.data_value}, indent=4))
 
-    # 외부에서 수신된 LED 밝기 값을 업데이트하는 함수
     def update_brightness(self, value):
         self.data_value = value
         self.data_label.setText(str(value))
@@ -229,13 +242,15 @@ class MainWindow(QWidget):
 
         self.serial_reader1.dataReceived.connect(self.handle_serial_data)
         self.serial_reader2.dataReceived.connect(self.handle_serial_data)
+        self.serial_reader2.rfidReceived.connect(self.handle_rfid_data)
+        self.serial_reader2.rfidDataReceived.connect(self.handle_rfid_mode_data)
 
         self.serial_reader1.start()
         self.serial_reader2.start()
 
-        self.main_screen = MainScreen(self.stacked_widget)
+        # MainScreen에 serial_reader2 (static_board)를 전달
+        self.main_screen = MainScreen(self.stacked_widget, serial_writer=self.serial_reader2)
         self.control_mode_screen = ControlModeScreen(self.stacked_widget)
-        # LEDControlScreen은 정적 보드와 연동 (serial_reader2 사용)
         self.led_control_screen = LEDControlScreen(self.stacked_widget, serial_writer=self.serial_reader2)
         self.monitor_control_screen = MonitorControlScreen(self.stacked_widget, serial_writer=self.serial_reader1)
         self.desk_control_screen = DeskControlScreen(self.stacked_widget, serial_writer=self.serial_reader1)
@@ -264,7 +279,6 @@ class MainWindow(QWidget):
             }
             print(json.dumps(data_dict, indent=4))
         elif board == "static_board":
-            # 정적 보드의 LED 밝기 값(0~7)을 LEDControlScreen에 업데이트
             self.led_control_screen.update_brightness(monitor_height)
             data_dict = {
                 "board": board,
@@ -272,11 +286,58 @@ class MainWindow(QWidget):
             }
             print(json.dumps(data_dict, indent=4))
 
+    @pyqtSlot(str)
+    def handle_rfid_data(self, uid):
+        self.main_screen.label.setText(f"User ID : {uid}")
+        print(json.dumps({"desk_gui": "RFID UID updated", "uid": uid}, indent=4))
+
+    @pyqtSlot(str)
+    def handle_rfid_mode_data(self, data_str):
+        # RFID 카드 내부 데이터(ModeData)를 MainScreen 라벨에 추가 표시하고,
+        # 해당 데이터를 파싱하여 각 제어 화면에 반영하는 예시 코드
+
+        # 예시: 데이터 문자열 형식 "Mode: 1, Brightness: 10, Monitor: 20/30, Desk: 100"
+        try:
+            parts = data_str.split(',')
+            mode = int(parts[0].split(':')[1].strip())
+            brightness_val = int(parts[1].split(':')[1].strip())
+            monitor_part = parts[2].split(':')[1].strip()  # 예: "20/30"
+            monitor_height, monitor_tilt = [int(x.strip()) for x in monitor_part.split('/')]
+            desk_height_val = int(parts[3].split(':')[1].strip())
+        except Exception as e:
+            print("RFID 데이터 파싱 에러:", e)
+            mode = brightness_val = monitor_height = monitor_tilt = desk_height_val = 0
+
+        # 각 모드에 따라 제어 동작 수행
+        if mode == 1:
+            # Mode 1: LED 제어 화면 업데이트
+            self.led_control_screen.update_brightness(brightness_val)
+            print("RFID Mode 1: LED 밝기를", brightness_val, "로 업데이트")
+        elif mode == 2:
+            # Mode 2: Desk 제어 화면 업데이트
+            self.desk_control_screen.data_value_label.setText(str(desk_height_val))
+            print("RFID Mode 2: Desk 높이를", desk_height_val, "로 업데이트")
+        elif mode == 3:
+            # Mode 3: Monitor 제어 화면 업데이트
+            self.monitor_control_screen.data_label_front_back.setText(str(monitor_tilt))
+            self.monitor_control_screen.data_label_up_down.setText(str(monitor_height))
+            print("RFID Mode 3: Monitor 값", monitor_height, "/", monitor_tilt, "로 업데이트")
+        else:
+            print("RFID Mode 데이터: 정의되지 않은 모드", mode)
+
+        # MainScreen 라벨에도 업데이트 내용 추가 표시
+        current_text = self.main_screen.label.text()
+        new_text = current_text + "\n" + data_str
+        self.main_screen.label.setText(new_text)
+        print(json.dumps({"desk_gui": "RFID ModeData updated", "data": data_str}, indent=4))
+
 # ----------------------------
 # 시리얼 리더 (QThread 사용, 쓰기 기능 포함)
 # ----------------------------
 class SerialReader(QThread):
     dataReceived = pyqtSignal(str, int, int, int)  # board, monitor_height, monitor_tilt, desk_height
+    rfidReceived = pyqtSignal(str)  # RFID UID를 문자열로 전달
+    rfidDataReceived = pyqtSignal(str)  # RFID 내부 데이터(ModeData)를 문자열로 전달
 
     def __init__(self, port, baudrate, board_label, parent=None):
         super().__init__(parent)
@@ -295,19 +356,44 @@ class SerialReader(QThread):
         while True:
             try:
                 if self.ser.in_waiting > 0:
-                    while self.ser.read(1) != b'\xFF':
-                        pass
-                    if self.board_label == "static_board":
-                        data = self.ser.read(3)
-                        if len(data) == 3:
-                            led_brightness = data[0]
-                            print("Static board raw data:", data)
-                            self.dataReceived.emit(self.board_label, led_brightness, 0, 0)
+                    header = self.ser.read(1)
+                    if header == b'\xFF':
+                        # LED 제어나 동적 보드 데이터 처리
+                        if self.board_label == "static_board":
+                            data = self.ser.read(3)
+                            if len(data) == 3:
+                                led_brightness = data[0]
+                                self.dataReceived.emit(self.board_label, led_brightness, 0, 0)
+                        else:
+                            data = self.ser.read(3)
+                            if len(data) == 3:
+                                monitor_height, monitor_tilt, desk_height = struct.unpack('BBB', data)
+                                self.dataReceived.emit(self.board_label, monitor_height, monitor_tilt, desk_height)
+                    elif header == b'\xFA':
+                        # RFID UID 패킷 처리
+                        uid_length_byte = self.ser.read(1)
+                        if uid_length_byte:
+                            uid_length = uid_length_byte[0]
+                            uid_bytes = self.ser.read(uid_length)
+                            if len(uid_bytes) == uid_length:
+                                uid_str = uid_bytes.hex().upper()
+                                self.rfidReceived.emit(uid_str)
+                                print(json.dumps({"desk_gui": "RFID UID received", "uid": uid_str}, indent=4))
+                    elif header == b'\xFB':
+                        # RFID 내부 데이터 패킷 처리 (5바이트: ModeData)
+                        data_bytes = self.ser.read(5)
+                        if len(data_bytes) == 5:
+                            mode = data_bytes[0]
+                            brightness = data_bytes[1]
+                            monitor_height = data_bytes[2]
+                            monitor_tilt = data_bytes[3]
+                            desk_height = data_bytes[4]
+                            data_str = f"Mode: {mode}, Brightness: {brightness}, Monitor: {monitor_height}/{monitor_tilt}, Desk: {desk_height}"
+                            self.rfidDataReceived.emit(data_str)
+                            print(json.dumps({"desk_gui": "RFID Data received", "data": data_str}, indent=4))
                     else:
-                        data = self.ser.read(3)
-                        if len(data) == 3:
-                            monitor_height, monitor_tilt, desk_height = struct.unpack('BBB', data)
-                            self.dataReceived.emit(self.board_label, monitor_height, monitor_tilt, desk_height)
+                        # 알 수 없는 헤더는 무시
+                        pass
             except Exception as e:
                 print(f"Error reading from {self.port}: {e}")
                 break
