@@ -82,11 +82,8 @@ void loop() {
     }
     // 모니터 Front/Back 제어 (서보2 조정)
     else if (header == 0xFC) {
-      while (Serial.available() <= 0) {
-        ; // 명령 값 대기
-      }
+      while (Serial.available() <= 0) { ; }
       uint8_t cmd = Serial.read();
-      // cmd 1: Front (서보 각도 증가), 0: Back (서보 각도 감소)
       if (cmd == 1) {
         servoAngle2 += 5;
         if (servoAngle2 > 180) servoAngle2 = 180;
@@ -98,11 +95,8 @@ void loop() {
     }
     // 모니터 Up/Down 제어 (서보1 조정)
     else if (header == 0xFB) {
-      while (Serial.available() <= 0) {
-        ; // 명령 값 대기
-      }
+      while (Serial.available() <= 0) { ; }
       uint8_t cmd = Serial.read();
-      // cmd 1: Up (서보 각도 증가), 0: Down (서보 각도 감소)
       if (cmd == 1) {
         servoAngle1 += 5;
         if (servoAngle1 > 180) servoAngle1 = 180;
@@ -116,11 +110,9 @@ void loop() {
   
   // ================================
   // 2. 물리 버튼에 의한 제어 처리
-  // (만약 시리얼 명령이 처리되지 않은 경우)
   // ================================
   if (!packetToSend) {
     bool angleChanged = false;
-    // 서보1 제어 (물리 버튼)
     if (digitalRead(buttonUp1) == HIGH) {
       servoAngle1 += 5;
       if (servoAngle1 > 180) servoAngle1 = 180;
@@ -133,7 +125,6 @@ void loop() {
       angleChanged = true;
       delay(200);
     }
-    // 서보2 제어 (물리 버튼)
     if (digitalRead(buttonUp2) == HIGH) {
       servoAngle2 += 5;
       if (servoAngle2 > 180) servoAngle2 = 180;
@@ -147,8 +138,7 @@ void loop() {
       delay(200);
     }
     
-    // 액추에이터 물리 버튼 제어
-    uint8_t actuatorState = 0;  // 0: 정지, 1: UP, 2: DOWN
+    uint8_t actuatorState = 0;
     if (digitalRead(buttonUpAct) == HIGH) {
       actuatorState = 1;
       delay(200);
@@ -177,30 +167,14 @@ void loop() {
   }
   
   // ================================
-  // 3. 패킷 송신: 센서 측정 후 서보 각도 및 초음파 센서 값 전송
+  // 3. 패킷 송신: 서보 각도 및 초음파 센서 값 전송
   // ================================
   if (packetToSend) {
-    // 액추에이터 동작이 끝난 후 초음파 센서로 거리 측정
-    digitalWrite(trigPin, LOW);
-    delayMicroseconds(2);
-    digitalWrite(trigPin, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(trigPin, LOW);
-    long duration = pulseIn(echoPin, HIGH);
-    int distance = duration * 0.034 / 2;
-    if (distance > 255) distance = 255;
-    ultrasonicDistance = (uint8_t) distance;
-    
-    // 서보에 변경된 각도 적용
-    servo1.write(servoAngle1);
-    servo2.write(servoAngle2);
-    
-    // 패킷 구성: 시작 바이트(0xFF) + 서보1 각도 + 서보2 각도 + 초음파 센서 거리
     Serial.write(0xFF);
     Serial.write((uint8_t)servoAngle1);
     Serial.write((uint8_t)servoAngle2);
     Serial.write((uint8_t)ultrasonicDistance);
   }
   
-  delay(100);  // 과도한 전송 방지
+  delay(100);
 }
