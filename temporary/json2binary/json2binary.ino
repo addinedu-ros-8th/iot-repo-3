@@ -18,14 +18,7 @@ struct ModeData {
   uint8_t desk_height;
 };
 
-struct CommunData {
-  uint32_t uid;
-  uint8_t function_code;
-  uint8_t data;
-};
-
 ModeData modeData1, modeData2, modeData3; // Global structs for example
-CommunData communicationData;
 
 // Global flag and storage for the active card’s UID.
 bool cardActive = false;
@@ -136,22 +129,10 @@ void loop() {
       // Save the UID of the detected card
       memcpy(&storedUid, &rc522.uid, sizeof(rc522.uid));
       cardActive = true;
-      // Example: Assuming the UID is 4 bytes long
-      if (rc522.uid.size == 4) {
-        communicationData.uid = ((uint32_t)storedUid.uidByte[0] << 24) |
-                                ((uint32_t)storedUid.uidByte[1] << 16) |
-                                ((uint32_t)storedUid.uidByte[2] << 8)  |
-                                (uint32_t)storedUid.uidByte[3];
-      }
-      communicationData.function_code = 06;
-      communicationData.data = 1;
       Serial.println("RFID 카드 감지됨. 카드와의 세션을 유지합니다.");
       // Note: We do NOT call PICC_HaltA() or PCD_StopCrypto1() here.
     }
-  } esle if(if (!rc522.PICC_ReadCardSerial())){
-    communicationData.function_code = 06;
-    communicationData.data = 0;
-  }else {
+  } else {
     // At this point, the card is already active.
     // You may want to add a method to detect if the card has been removed.
     // For this example, we assume the card remains present.
@@ -182,8 +163,6 @@ void loop() {
           modeData1.brightness = (uint8_t)controlValue;
           Serial.print("Set brightness to: ");
           Serial.println(modeData1.brightness);
-          communicationData.function_code = 00;
-          communicationData.data = controlValue;
         break;
 
         case 0x04: // rfid_read
@@ -202,8 +181,6 @@ void loop() {
           }
           // Do not halt the card here, so the session stays active.
         }
-        communicationData.function_code = 04;
-        communicationData.data = controlValue;
         break;
 
         case 0x05: // rfid_write
@@ -221,8 +198,6 @@ void loop() {
           }
           // Do not halt the card here.
         }
-        communicationData.function_code = 05;
-        communicationData.data = controlValue;
         break;
 
         // Optional: You can add additional function codes if needed.
@@ -233,8 +208,5 @@ void loop() {
           break;
       }
     }
-  }
-  if(Serial.available()>0){
-    Serial.write((uint8_t *)&communicationData, sizeof(communicationData));
   }
 }
