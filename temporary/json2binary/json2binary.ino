@@ -18,12 +18,15 @@ struct ModeData {
   uint16_t desk_height;
 };
 
-ModeData modeData1, modeData2, modeData3; // global structs for example
+ModeData modeData1, modeData2, modeData3; // Global structs for example
+
+// Global flag and storage for the active card’s UID.
+bool cardActive = false;
+MFRC522::Uid storedUid;
 
 // ---------------------------------------------------------------------
 // RFID helper functions
 // ---------------------------------------------------------------------
-
 // 블록 인증 함수 (이미 읽은 UID를 사용)
 MFRC522::StatusCode authenticateBlock(int block, MFRC522::Uid *uid) {
   MFRC522::StatusCode status = rc522.PCD_Authenticate(
@@ -120,102 +123,84 @@ void setup() {
 // Main Loop
 // ---------------------------------------------------------------------
 void loop() {
-  // We expect two integers from Serial:
-  //  1) functionCode  (0x04 for read, 0x05 for write)
-  //  2) controlValue  (the block number: 4, 5, or 6)
-  if (Serial.available() >= 2) {
-    int functionCode = Serial.parseInt();  // e.g. 04 or 05
-    int controlValue = Serial.parseInt();  // e.g. 04, 05, 06 (the block)
-
-    Serial.println("----------------------------------");
-    Serial.print("Function Code: ");
-    Serial.println(functionCode, HEX);
-    Serial.print("Control Value (Block): ");
-    Serial.println(controlValue);
-
-    // Check if block number is valid
-    if (controlValue != 4 && controlValue != 5 && controlValue != 6) {
-      Serial.println("ERROR: Invalid block number! Must be 4, 5, or 6.");
-      return;
+  // If no card is currently active, check for a new one.
+  if (!cardActive) {
+    if (rc522.PICC_IsNewCardPresent() && rc522.PICC_ReadCardSerial()) {
+      // Save the UID of the detected card
+      memcpy(&storedUid, &rc522.uid, sizeof(rc522.uid));
+      cardActive = true;
+      Serial.println("RFID 카드 감지됨. 카드와의 세션을 유지합니다.");
+      // Note: We do NOT call PICC_HaltA() or PCD_StopCrypto1() here.
     }
+  } else {
+    // At this point, the card is already active.
+    // You may want to add a method to detect if the card has been removed.
+    // For this example, we assume the card remains present.
 
-    // Now handle the read or write
-    switch (functionCode) {
-      case 0x04: // rfid_read
-      {
-        // Attempt to read from the specified block if a card is present
-        if (rc522.PICC_IsNewCardPresent() && rc522.PICC_ReadCardSerial()) {
-          Serial.println("RFID card found. Starting READ...");
+    // Process Serial commands while the card is active.
+    // We expect two integers:
+    //  1) functionCode (e.g. 0x04 for read, 0x05 for write)
+    //  2) controlValue (the block number: 4, 5, or 6)
+    if (Serial.available() >= 2) {
+      int functionCode = Serial.parseInt();  // e.g. 0x04 or 0x05
+      int controlValue = Serial.parseInt();    // e.g. 4, 5, or 6
 
-          // Print UID (debug)
-          Serial.print("UID: ");
-          for (byte i = 0; i < rc522.uid.size; i++) {
-            Serial.print(rc522.uid.uidByte[i], HEX);
-            Serial.print(" ");
-          }
-          Serial.println();
+      Serial.println("----------------------------------");
+      Serial.print("Function Code: ");
+      Serial.println(functionCode, HEX);
+      Serial.print("Control Value (Block): ");
+      Serial.println(controlValue);
 
+      // Check if block number is valid
+      if (controlValue != 4 && controlValue != 5 && controlValue != 6) {
+        Serial.println("ERROR: Invalid block number! Must be 4, 5, or 6.");
+        return;
+      }
+
+      // Handle the command
+      switch (functionCode) {
+        case 0x04: // rfid_read
+        {
+          Serial.println("RFID 카드 읽기 명령.");
           ModeData tempData;
-          if (readRFIDData(controlValue, tempData, &rc522.uid) == MFRC522::STATUS_OK) {
+          if (readRFIDData(controlValue, tempData, &storedUid) == MFRC522::STATUS_OK) {
             Serial.print("[Block ");
             Serial.print(controlValue);
-            Serial.println("] Read success:");
+            Serial.println("] 읽기 성공:");
             printModeData(tempData);
           } else {
             Serial.print("[Block ");
             Serial.print(controlValue);
-            Serial.println("] Read fail.");
+            Serial.println("] 읽기 실패.");
           }
-
-          // Done communicating with this card
-          rc522.PICC_HaltA();
-          rc522.PCD_StopCrypto1();
-        } else {
-          Serial.println("No RFID card present for reading.");
+          // Do not halt the card here, so the session stays active.
         }
-      }
-      break;
+        break;
 
-      case 0x05: // rfid_write
-      {
-        // Attempt to write to the specified block if a card is present
-        if (rc522.PICC_IsNewCardPresent() && rc522.PICC_ReadCardSerial()) {
-          Serial.println("RFID card found. Starting WRITE...");
-
-          // Print UID (debug)
-          Serial.print("UID: ");
-          for (byte i = 0; i < rc522.uid.size; i++) {
-            Serial.print(rc522.uid.uidByte[i], HEX);
-            Serial.print(" ");
-          }
-          Serial.println();
-
-          // For demo, let's always write modeData1 to the block.
-          // You could choose modeData2 or modeData3, or add logic to pick which one.
-          if (writeRFIDData(controlValue, modeData1, &rc522.uid) == MFRC522::STATUS_OK) {
+        case 0x05: // rfid_write
+        {
+          Serial.println("RFID 카드 쓰기 명령.");
+          // For demonstration, we write modeData1. You can choose modeData2 or modeData3 as needed.
+          if (writeRFIDData(controlValue, modeData1, &storedUid) == MFRC522::STATUS_OK) {
             Serial.print("[Block ");
             Serial.print(controlValue);
-            Serial.println("] Write success (modeData1).");
+            Serial.println("] 쓰기 성공 (modeData1).");
           } else {
             Serial.print("[Block ");
             Serial.print(controlValue);
-            Serial.println("] Write fail.");
+            Serial.println("] 쓰기 실패.");
           }
-
-          // Done communicating with this card
-          rc522.PICC_HaltA();
-          rc522.PCD_StopCrypto1();
-        } else {
-          Serial.println("No RFID card present for writing.");
+          // Do not halt the card here.
         }
-      }
-      break;
-
-      default:
-        Serial.print("ERROR: Unknown function code (");
-        Serial.print(functionCode, HEX);
-        Serial.println("). Must be 0x04 for read or 0x05 for write.");
         break;
+
+        // Optional: You can add additional function codes if needed.
+        default:
+          Serial.print("ERROR: Unknown function code (");
+          Serial.print(functionCode, HEX);
+          Serial.println("). Must be 0x04 for read or 0x05 for write.");
+          break;
+      }
     }
   }
 }
