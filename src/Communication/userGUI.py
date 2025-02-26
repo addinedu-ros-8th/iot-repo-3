@@ -8,7 +8,7 @@ from PyQt5 import uic
 from PyQt5.QtCore import Qt, QEvent
 
 # UI 파일 로드 (UI 파일 경로에 맞게 수정)
-from_class = uic.loadUiType("/home/lim/dev_ws/iot/iot-repo-3/src/Communication/userGUI.ui")[0]
+from_class = uic.loadUiType("/home/ted/desk12/iot-repo-3/src/Communication/userGUI.ui")[0]
 
 class MainWindow(QMainWindow, from_class):
     def __init__(self):
@@ -19,7 +19,7 @@ class MainWindow(QMainWindow, from_class):
         # SocketIO 클라이언트 연결
         self.sio = socketio.Client()
         try:
-            self.sio.connect("http://localhost:5000")
+            self.sio.connect("http://192.168.0.14:5000")
             print("SocketIO connected!")
         except Exception as e:
             print("SocketIO connection failed:", e)

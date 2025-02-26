@@ -20,4 +20,4 @@ def handle_data(data):
     socketio.emit('response_data', response_data)
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True) #포트번호 5000번 이상설정할것
+    socketio.run(app, host='0.0.0.0', port=5002, allow_unsafe_werkzeug=True) #포트번호 5000번 이상설정할것
