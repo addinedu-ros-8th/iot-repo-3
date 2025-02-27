@@ -238,7 +238,7 @@ class MainWindow(QWidget):
 
         # 동적 보드와 정적 보드의 시리얼 리더 생성
         self.serial_reader1 = SerialReader(port='/dev/ttyACM2', baudrate=115200, board_label="dynamic_board")
-        self.serial_reader2 = SerialReader(port='/dev/ttyACM1', baudrate=9600, board_label="static_board")
+        self.serial_reader2 = SerialReader(port='/dev/ttyACM0', baudrate=9600, board_label="static_board")
 
         self.serial_reader1.dataReceived.connect(self.handle_serial_data)
         self.serial_reader2.dataReceived.connect(self.handle_serial_data)
@@ -302,6 +302,7 @@ class MainWindow(QWidget):
             monitor_part = parts[2].split(':')[1].strip()  # Expected format "H/T"
             monitor_height, monitor_tilt = [int(x.strip()) for x in monitor_part.split('/')]
             desk_height_val = int(parts[3].split(':')[1].strip())
+            print("data read")
         except Exception as e:
             print("RFID 데이터 파싱 에러:", e)
             return

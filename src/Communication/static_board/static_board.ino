@@ -110,6 +110,26 @@ void printModeData(const ModeData &data) {
   Serial.print(" DeskHeight: ");     Serial.println(data.desk_height);
 }
 
+void sendModeData(const ModeData &data) {
+  // Send a header byte (if your protocol requires one, e.g. 0xFB)
+  Serial.write(0xFB);
+  
+  // Send the five bytes of data as raw binary
+  Serial.write(data.mode);
+  Serial.write(data.brightness);
+  Serial.write(data.monitor_height);
+  Serial.write(data.monitor_tilt);
+  Serial.write(data.desk_height);
+  
+  // Optionally, also print for debugging purposes
+  Serial.print("Data sent: ");
+  Serial.print("Mode: "); Serial.print(data.mode); Serial.print("  ");
+  Serial.print("Brightness: "); Serial.print(data.brightness); Serial.print("  ");
+  Serial.print("MonitorHeight: "); Serial.print(data.monitor_height); Serial.print("  ");
+  Serial.print("MonitorTilt: "); Serial.print(data.monitor_tilt); Serial.print("  ");
+  Serial.print("DeskHeight: "); Serial.println(data.desk_height);
+}
+
 // ---------------------------------------------------------------------
 // Serial 명령 프로토콜 처리 함수
 // ---------------------------------------------------------------------
@@ -157,6 +177,10 @@ void processSerialCommands() {
             Serial.print(block);
             Serial.println("] 읽기 성공:");
             printModeData(tempData);
+            sendModeData(tempData);
+            rc522.PICC_HaltA();
+            // Optionally, reset cardActive if needed
+            cardActive = false;
           } else {
             Serial.print("[Block ");
             Serial.print(block);
@@ -181,9 +205,6 @@ void processSerialCommands() {
           Serial.println(").");
         }
       }
-      // RFID 명령 처리 후 카드 세션 종료
-      rc522.PICC_HaltA();
-      cardActive = false;
     }
     else {
       // 알 수 없는 헤더는 버퍼에서 제거
