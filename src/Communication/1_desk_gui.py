@@ -69,7 +69,7 @@ class ControlModeScreen(QWidget):
         layout.addLayout(grid_layout)
         self.setLayout(layout)
 
-# LEDControlScreen: LED 제어 화면 (상승/하강 버튼)
+# LEDControlScreen: LED 제어 화면 (정적 보드만 업데이트)
 class LEDControlScreen(QWidget):
     def __init__(self, stacked_widget, serial_writer, main_window):
         super().__init__()
@@ -116,6 +116,8 @@ class LEDControlScreen(QWidget):
             print(json.dumps({"desk_gui": "LED up clicked", "light": self.data_value}, indent=4))
             self.main_window.current_led_brightness = self.data_value
             self.main_window.send_data_to_server()
+            # 정적 보드만 업데이트
+            self.main_window.update_static_board()
 
     def decrease_data(self):
         if self.data_value > 0:
@@ -126,12 +128,13 @@ class LEDControlScreen(QWidget):
             print(json.dumps({"desk_gui": "LED down clicked", "light": self.data_value}, indent=4))
             self.main_window.current_led_brightness = self.data_value
             self.main_window.send_data_to_server()
+            self.main_window.update_static_board()
 
     def update_brightness(self, value):
         self.data_value = value
         self.data_label.setText(str(value))
 
-# DeskControlScreen: 책상 높낮이 제어 화면
+# DeskControlScreen: 책상 높낮이 제어 화면 (동적 보드 업데이트)
 class DeskControlScreen(QWidget):
     def __init__(self, stacked_widget, serial_writer, main_window):
         super().__init__()
@@ -169,11 +172,13 @@ class DeskControlScreen(QWidget):
         self.btn_down.clicked.connect(self.send_down_command)
 
     def send_up_command(self):
+        # 상대 명령 전송 (동적 보드에서 임시 처리)
         packet = struct.pack('BB', 0xFD, 0)
         self.serial_writer.write_command(packet)
         self.main_window.current_desk_height += 1
         self.data_value_label.setText(str(self.main_window.current_desk_height))
         self.main_window.send_data_to_server()
+        self.main_window.update_dynamic_board()
 
     def send_down_command(self):
         packet = struct.pack('BB', 0xFD, 1)
@@ -182,8 +187,9 @@ class DeskControlScreen(QWidget):
             self.main_window.current_desk_height -= 1
         self.data_value_label.setText(str(self.main_window.current_desk_height))
         self.main_window.send_data_to_server()
+        self.main_window.update_dynamic_board()
 
-# MonitorControlScreen: 모니터 각도 및 높낮이 제어 화면
+# MonitorControlScreen: 모니터 각도 및 높낮이 제어 화면 (동적 보드 업데이트)
 class MonitorControlScreen(QWidget):
     def __init__(self, stacked_widget, serial_writer, main_window):
         super().__init__()
@@ -229,7 +235,6 @@ class MonitorControlScreen(QWidget):
         self.btn_up.clicked.connect(self.send_up_command)
         self.btn_down.clicked.connect(self.send_down_command)
 
-        # 초기 UI 값 설정
         self.data_label_front_back.setText(str(self.main_window.current_monitor_angle))
         self.data_label_up_down.setText(str(self.main_window.current_monitor_height))
 
@@ -237,47 +242,51 @@ class MonitorControlScreen(QWidget):
         new_angle = self.main_window.current_monitor_angle + 1
         if new_angle > 255:
             new_angle = 255
-        packet = struct.pack('BB', 0xFC, new_angle)
+        packet = struct.pack('BB', 0xFC, 1)
         self.serial_writer.write_command(packet)
         self.main_window.current_monitor_angle = new_angle
         self.data_label_front_back.setText(str(new_angle))
         self.main_window.send_data_to_server()
+        self.main_window.update_dynamic_board()
 
     def send_back_command(self):
         new_angle = max(0, self.main_window.current_monitor_angle - 1)
-        packet = struct.pack('BB', 0xFC, new_angle)
+        packet = struct.pack('BB', 0xFC, 0)
         self.serial_writer.write_command(packet)
         self.main_window.current_monitor_angle = new_angle
         self.data_label_front_back.setText(str(new_angle))
         self.main_window.send_data_to_server()
+        self.main_window.update_dynamic_board()
 
     def send_up_command(self):
         new_height = self.main_window.current_monitor_height + 1
         if new_height > 255:
             new_height = 255
-        packet = struct.pack('BB', 0xFB, new_height)
+        packet = struct.pack('BB', 0xFB, 1)
         self.serial_writer.write_command(packet)
         self.main_window.current_monitor_height = new_height
         self.data_label_up_down.setText(str(new_height))
         self.main_window.send_data_to_server()
+        self.main_window.update_dynamic_board()
 
     def send_down_command(self):
         new_height = max(0, self.main_window.current_monitor_height - 1)
-        packet = struct.pack('BB', 0xFB, new_height)
+        packet = struct.pack('BB', 0xFB, 0)
         self.serial_writer.write_command(packet)
         self.main_window.current_monitor_height = new_height
         self.data_label_up_down.setText(str(new_height))
         self.main_window.send_data_to_server()
+        self.main_window.update_dynamic_board()
 
 # MainWindow: 전체 UI 관리 및 서버와 시리얼 통신 처리
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("PyQt GUI Example")
+        self.setWindowTitle("Desk GUI Integrated")
         self.setFixedSize(320, 480)
         self.stacked_widget = QStackedWidget()
 
-        # Socket.IO 클라이언트 생성 및 서버 연결 (포트 5020)
+        # Socket.IO 클라이언트 생성 및 서버 연결
         self.sio = socketio.Client()
         try:
             self.sio.connect("http://192.168.0.45:2000")
@@ -285,11 +294,9 @@ class MainWindow(QWidget):
         except Exception as e:
             print("Socket.IO connection failed:", e)
 
-        # 서버로부터 'desk_update' 이벤트 수신 시 내부 상태 및 UI 업데이트
         @self.sio.on('desk_update')
         def on_desk_update(data):
             print("📡 Desk GUI received update from server:", data)
-            # 수신된 데이터의 키에 맞춰 instance 변수 업데이트
             self.current_led_brightness = data.get("light", self.current_led_brightness)
             self.current_monitor_height = data.get("monitor_height", self.current_monitor_height)
             self.current_monitor_angle = data.get("monitor_angle", self.current_monitor_angle)
@@ -299,16 +306,19 @@ class MainWindow(QWidget):
             self.monitor_control_screen.data_label_up_down.setText(str(self.current_monitor_height))
             self.monitor_control_screen.data_label_front_back.setText(str(self.current_monitor_angle))
             self.desk_control_screen.data_value_label.setText(str(self.current_desk_height))
+            # 서버 업데이트 시, 두 보드를 모두 갱신
+            self.update_static_board()
+            self.update_dynamic_board()
 
-        # 현재 상태값 저장용 변수
+        # 초기 상태 변수
         self.current_led_brightness = 0
-        self.current_monitor_height = 0
-        self.current_monitor_angle = 0
+        self.current_monitor_height = 90   # 예시 초기값
+        self.current_monitor_angle = 90    # 예시 초기값
         self.current_desk_height = 0
 
-        # 동적 보드와 정적 보드의 시리얼 리더 생성
-        self.serial_reader1 = SerialReader(port='/dev/ttyACM0', baudrate=115200, board_label="dynamic_board")
-        self.serial_reader2 = SerialReader(port='/dev/ttyACM1', baudrate=9600, board_label="static_board")
+        # 시리얼 포트 (예시 포트 번호, 환경에 맞게 수정)
+        self.serial_reader1 = SerialReader(port='/dev/ttyACM1', baudrate=115200, board_label="dynamic_board")
+        self.serial_reader2 = SerialReader(port='/dev/ttyACM0', baudrate=9600, board_label="static_board")
 
         self.serial_reader1.dataReceived.connect(self.handle_serial_data)
         self.serial_reader2.dataReceived.connect(self.handle_serial_data)
@@ -325,10 +335,10 @@ class MainWindow(QWidget):
         self.desk_control_screen = DeskControlScreen(self.stacked_widget, serial_writer=self.serial_reader1, main_window=self)
 
         self.stacked_widget.addWidget(self.main_screen)             # index 0
-        self.stacked_widget.addWidget(self.control_mode_screen)     # index 1
-        self.stacked_widget.addWidget(self.led_control_screen)      # index 2
-        self.stacked_widget.addWidget(self.monitor_control_screen)  # index 3
-        self.stacked_widget.addWidget(self.desk_control_screen)     # index 4
+        self.stacked_widget.addWidget(self.control_mode_screen)       # index 1
+        self.stacked_widget.addWidget(self.led_control_screen)        # index 2
+        self.stacked_widget.addWidget(self.monitor_control_screen)    # index 3
+        self.stacked_widget.addWidget(self.desk_control_screen)       # index 4
 
         layout = QVBoxLayout()
         layout.addWidget(self.stacked_widget)
@@ -348,11 +358,25 @@ class MainWindow(QWidget):
         else:
             print("Socket.IO not connected. Could not send data.")
 
+    def update_static_board(self):
+        # 정적 보드: LED 밝기 업데이트 (헤더 0xFF)
+        packet_led = struct.pack('BBBB', 0xFF, self.current_led_brightness, 0, 0)
+        self.serial_reader2.write_command(packet_led)
+        print("Static board updated: LED brightness =", self.current_led_brightness)
+
+    def update_dynamic_board(self):
+        # 동적 보드: 모니터 높이, 모니터 틸트, 책상 높이 업데이트 (헤더 0xFE)
+        packet_dyn = struct.pack('BBBB', 0xFE, self.current_monitor_height, self.current_monitor_angle, self.current_desk_height)
+        self.serial_reader1.write_command(packet_dyn)
+        print("Dynamic board updated:",
+              self.current_monitor_height,
+              self.current_monitor_angle,
+              self.current_desk_height)
+
     @pyqtSlot(str, int, int, int)
     def handle_serial_data(self, board, monitor_height, monitor_tilt, desk_height):
         if board == "dynamic_board":
             self.monitor_control_screen.data_label_up_down.setText(str(monitor_height))
-            # monitor_tilt를 monitor_angle으로 사용
             self.monitor_control_screen.data_label_front_back.setText(str(monitor_tilt))
             self.desk_control_screen.data_value_label.setText(str(desk_height))
 
