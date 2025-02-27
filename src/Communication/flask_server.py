@@ -6,7 +6,6 @@ import datetime
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# 클라이언트에서 메시지를 받을 때 실행되는 함수
 @socketio.on('send_data')
 def handle_data(data):
     print("📥 Received data from client:")
