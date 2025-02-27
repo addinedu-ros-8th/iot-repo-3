@@ -293,54 +293,57 @@ class MainWindow(QWidget):
 
     @pyqtSlot(str)
     def handle_rfid_mode_data(self, data_str):
-        # RFID 카드 내부 데이터(ModeData)를 MainScreen 라벨에 추가 표시하고,
-        # 해당 데이터를 파싱하여 각 제어 화면에 반영하는 예시 코드
-
-        # 예시: 데이터 문자열 형식 "Mode: 1, Brightness: 10, Monitor: 20/30, Desk: 100"
+        # Expected RFID ModeData string format:
+        # "Mode: X, Brightness: Y, Monitor: H/T, Desk: Z"
         try:
             parts = data_str.split(',')
             mode = int(parts[0].split(':')[1].strip())
             brightness_val = int(parts[1].split(':')[1].strip())
-            monitor_part = parts[2].split(':')[1].strip()  # 예: "20/30"
+            monitor_part = parts[2].split(':')[1].strip()  # Expected format "H/T"
             monitor_height, monitor_tilt = [int(x.strip()) for x in monitor_part.split('/')]
             desk_height_val = int(parts[3].split(':')[1].strip())
         except Exception as e:
             print("RFID 데이터 파싱 에러:", e)
-            mode = brightness_val = monitor_height = monitor_tilt = desk_height_val = 0
+            return
 
-        # 각 모드에 따라 제어 동작 수행
-        if mode == 1:
-            # Mode 1: LED 제어 - static_board에 LED 밝기 값을 전송
-            self.led_control_screen.update_brightness(brightness_val)
-            # 기존: header 0xFF와 LED 밝기 값을 패킹한 2바이트 패킷 전송
-            packet = struct.pack('BB', 0xFF, brightness_val)
-            self.serial_reader2.write_command(packet)
-            print("RFID Mode 1: LED 밝기를", brightness_val, "로 업데이트 및 전송")
-        elif mode == 2:
-            # Mode 2: Desk 제어 - dynamic_board에 책상 높이 값을 전송
-            self.desk_control_screen.data_value_label.setText(str(desk_height_val))
-            # 예시로 새로운 헤더 0xFE를 사용하여 책상 높이 제어 명령 전송
-            packet = struct.pack('BB', 0xFE, desk_height_val)
-            self.serial_reader1.write_command(packet)
-            print("RFID Mode 2: Desk 높이를", desk_height_val, "로 업데이트 및 전송")
-        elif mode == 3:
-            # Mode 3: Monitor 제어 - dynamic_board에 모니터 높이와 기울기 값을 전송
-            self.monitor_control_screen.data_label_front_back.setText(str(monitor_tilt))
-            self.monitor_control_screen.data_label_up_down.setText(str(monitor_height))
-            # 예시로 모니터 높이와 기울기를 제어하는 새로운 명령 헤더 사용 (0xF9, 0xF8)
-            packet_height = struct.pack('BB', 0xF9, monitor_height)
-            packet_tilt = struct.pack('BB', 0xF8, monitor_tilt)
-            self.serial_reader1.write_command(packet_height)
-            self.serial_reader1.write_command(packet_tilt)
-            print("RFID Mode 3: Monitor 값", monitor_height, "/", monitor_tilt, "로 업데이트 및 전송")
-        else:
-            print("RFID Mode 데이터: 정의되지 않은 모드", mode)
+        # Update the GUI with the new values
+        self.led_control_screen.update_brightness(brightness_val)
+        self.monitor_control_screen.data_label_up_down.setText(str(monitor_height))
+        self.monitor_control_screen.data_label_front_back.setText(str(monitor_tilt))
+        self.desk_control_screen.data_value_label.setText(str(desk_height_val))
 
-        # 기존 UI 업데이트: MainScreen의 레이블에 RFID 데이터를 추가 표시
+        # --- Send control data separately ---
+        # 1. Send LED brightness command to the static board.
+        #    Using header 0xFF with brightness value.
+        led_packet = struct.pack('BB', 0xFF, brightness_val)
+        self.serial_reader2.write_command(led_packet)
+        print("Sent LED brightness command to static board:", led_packet)
+        
+        # 2. Send monitor up/down command to the dynamic board.
+        #    Using header 0xFB and the monitor height value.
+        monitor_updown_packet = struct.pack('BB', 0xFB, monitor_height)
+        self.serial_reader1.write_command(monitor_updown_packet)
+        print("Sent monitor up/down command to dynamic board:", monitor_updown_packet)
+        
+        # 3. Send monitor front/back command to the dynamic board.
+        #    Using header 0xFC and the monitor tilt value.
+        monitor_frontback_packet = struct.pack('BB', 0xFC, monitor_tilt)
+        self.serial_reader1.write_command(monitor_frontback_packet)
+        print("Sent monitor front/back command to dynamic board:", monitor_frontback_packet)
+        
+        # # 4. Send desk control command to the dynamic board.
+        # #    Using header 0xFD and the desk height value.
+        # desk_packet = struct.pack('BB', 0xFD, desk_height_val)
+        # self.serial_reader1.write_command(desk_packet)
+        # print("Sent desk control command to dynamic board:", desk_packet)
+        
+        # For debugging or visual feedback, append just the mode value to the main GUI label.
         current_text = self.main_screen.label.text()
-        new_text = current_text + "\n" + data_str
+        new_text = current_text + "\nMode: " + str(mode)
         self.main_screen.label.setText(new_text)
-        print(json.dumps({"desk_gui": "RFID ModeData updated", "data": data_str}, indent=4))
+        print(json.dumps({"desk_gui": "RFID ModeData updated", "mode": mode}, indent=4))
+
+
 
 # ----------------------------
 # 시리얼 리더 (QThread 사용, 쓰기 기능 포함)
