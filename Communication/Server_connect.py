@@ -9,9 +9,10 @@ import termios
 import tty
 
 HOST = '0.0.0.0'
-PORT = 1234
+PORT = 8978
 exit_flag = False
 
+# Arduino 연결 시도
 try:
     ser = serial.Serial('/dev/ttyACM0', 9600, timeout=1)
     time.sleep(2)
@@ -30,7 +31,7 @@ def keyboard_listener():
             rlist, _, _ = select.select([sys.stdin], [], [], 0.1)
             if rlist:
                 ch = sys.stdin.read(1)
-                if ch == '\x1b':
+                if ch == '\x1b':  # ESC 키
                     print("\nESC 키 입력 감지. 종료합니다.")
                     exit_flag = True
                     break
@@ -46,8 +47,13 @@ def arduino_listener(client_conn):
                 line = ser.readline().decode('utf-8').strip()
                 if line:
                     print("Arduino 메시지:", line)
+                    # Arduino가 JSON 형식이면 그대로 사용, 아니면 감싸기
                     try:
-                        client_conn.sendall(line.encode('utf-8'))
+                        json_data = json.loads(line)
+                    except json.JSONDecodeError:
+                        json_data = {"arduino_data": line}
+                    try:
+                        client_conn.sendall(json.dumps(json_data, separators=(',', ':')).encode('utf-8'))
                     except Exception as e:
                         print("클라이언트 전송 오류:", e)
                         break
@@ -65,6 +71,7 @@ def run_server():
         with conn:
             print("클라이언트 연결됨:", addr)
             conn.settimeout(0.5)
+            # Arduino 메시지를 클라이언트에 전달하는 별도 스레드 시작
             arduino_thread = threading.Thread(target=arduino_listener, args=(conn,), daemon=True)
             arduino_thread.start()
             while not exit_flag:
@@ -77,6 +84,8 @@ def run_server():
                     print("수신:", received_message)
                     try:
                         json_data = json.loads(received_message)
+                        # 서버에서 새로운 데이터 수신 시 로그 출력
+                        print("서버: 새로운 데이터 수신됨:", json_data)
                     except json.JSONDecodeError as e:
                         print("JSON 파싱 에러:", e)
                         json_data = None
@@ -84,6 +93,7 @@ def run_server():
                         message_to_arduino = json.dumps(json_data, separators=(',', ':')) + "\n"
                         ser.write(message_to_arduino.encode('utf-8'))
                         print("Arduino로 전송:", message_to_arduino)
+                    # 처리 후 응답 메시지 전송
                     response = {"status": "ok", "received": json_data, "message": "성공"}
                     conn.sendall(json.dumps(response, separators=(',', ':')).encode('utf-8'))
                 except socket.timeout:
@@ -91,7 +101,7 @@ def run_server():
                 except Exception as e:
                     print("오류 발생:", e)
                     break
-            print("연결종료.")
+            print("서버 종료 시작.")
 
 if __name__ == '__main__':
     key_thread = threading.Thread(target=keyboard_listener, daemon=True)

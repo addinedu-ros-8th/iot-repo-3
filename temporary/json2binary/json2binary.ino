@@ -1,27 +1,35 @@
-#include <ArduinoJson.h>
 #include <SPI.h>
 #include <MFRC522.h>
+
 #define RST_PIN 9
 #define SS_PIN 10
+
 MFRC522 rc522(SS_PIN, RST_PIN);
 MFRC522::MIFARE_Key key; // 인증키 변수
 
+// ---------------------------------------------------------------------
+// Data structure
+// ---------------------------------------------------------------------
 struct ModeData {
-    uint8_t mode;
-    uint8_t led_r;
-    uint8_t led_g;
-    uint8_t led_b;
-    uint8_t led_w;
-    uint8_t servo_1;
-    uint8_t servo_2;
-    uint16_t linear_actuator;
+  uint8_t mode;
+  uint8_t brightness;
+  uint8_t monitor_height;
+  uint8_t monitor_tilt;
+  uint8_t desk_height;
 };
 
-ModeData modeData1, modeData2, modeData3;
+ModeData modeData1, modeData2, modeData3; // 전역 구조체
 
-// 블록 인증 함수 (이미 읽은 UID를 사용)
+// RFID 카드 UID 저장 및 세션 유지 변수
+bool cardActive = false;
+MFRC522::Uid storedUid;
+
+// ---------------------------------------------------------------------
+// RFID helper functions
+// ---------------------------------------------------------------------
 MFRC522::StatusCode authenticateBlock(int block, MFRC522::Uid *uid) {
-  MFRC522::StatusCode status = rc522.PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, block, &key, uid);
+  MFRC522::StatusCode status = rc522.PCD_Authenticate(
+      MFRC522::PICC_CMD_MF_AUTH_KEY_A, block, &key, uid);
   if (status != MFRC522::STATUS_OK) {
     Serial.print("인증 실패: ");
     Serial.println(rc522.GetStatusCodeName(status));
@@ -29,20 +37,14 @@ MFRC522::StatusCode authenticateBlock(int block, MFRC522::Uid *uid) {
   return status;
 }
 
-// RFID 태그에 데이터를 쓰는 함수 (이미 읽은 UID를 사용)
-MFRC522::StatusCode writeRFIDData(int block, ModeData data, MFRC522::Uid *uid) {
+MFRC522::StatusCode writeRFIDData(int block, const ModeData &data, MFRC522::Uid *uid) {
   MFRC522::StatusCode status = authenticateBlock(block, uid);
   if (status != MFRC522::STATUS_OK) return status;
-  byte buffer[16] = {0};
-  buffer[0] = data.mode;
-  buffer[1] = data.led_r;
-  buffer[2] = data.led_g;
-  buffer[3] = data.led_b;
-  buffer[4] = data.led_w;
-  buffer[5] = data.servo_1;
-  buffer[6] = data.servo_2;
-  buffer[7] = (data.linear_actuator >> 8) & 0xFF; // High byte
-  buffer[8] = data.linear_actuator & 0xFF;        // Low byte
+
+  byte buffer[16];
+  memset(buffer, 0x00, sizeof(buffer));
+  memcpy(buffer, &data, sizeof(data));
+
   status = rc522.MIFARE_Write(block, buffer, 16);
   if (status != MFRC522::STATUS_OK) {
     Serial.print("쓰기 실패: ");
@@ -51,175 +53,155 @@ MFRC522::StatusCode writeRFIDData(int block, ModeData data, MFRC522::Uid *uid) {
   return status;
 }
 
-// RFID 태그에서 데이터를 읽어오는 함수 (이미 읽은 UID를 사용)
 MFRC522::StatusCode readRFIDData(int block, ModeData &data, MFRC522::Uid *uid) {
   MFRC522::StatusCode status = authenticateBlock(block, uid);
   if (status != MFRC522::STATUS_OK) return status;
-  byte buffer[18] = {0};  // 16바이트 데이터 + 2바이트 CRC 공간
+
+  byte buffer[18];  
   byte size = sizeof(buffer);
+
   status = rc522.MIFARE_Read(block, buffer, &size);
-  if (status == MFRC522::STATUS_OK) {
-    data.mode = buffer[0];
-    data.led_r = buffer[1];
-    data.led_g = buffer[2];
-    data.led_b = buffer[3];
-    data.led_w = buffer[4];
-    data.servo_1 = buffer[5];
-    data.servo_2 = buffer[6];
-    data.linear_actuator = (buffer[7] << 8) | buffer[8]; // 16비트 데이터 복원
-  } else {
+  if (status != MFRC522::STATUS_OK) {
     Serial.print("읽기 실패: ");
     Serial.println(rc522.GetStatusCodeName(status));
+    return status;
   }
+
+  memcpy(&data, buffer, sizeof(data));
   return status;
 }
 
-// Sample JSON data
-const char json1[] = "{\"mode\":1,\"led_r\":120,\"led_g\":45,\"led_b\":200,\"led_w\":75,\"servo_1\":90,\"servo_2\":135,\"linear_actuator\":300}";
-const char json2[] = "{\"mode\":2,\"led_r\":255,\"led_g\":100,\"led_b\":50,\"led_w\":180,\"servo_1\":45,\"servo_2\":90,\"linear_actuator\":512}";
-const char json3[] = "{\"mode\":3,\"led_r\":0,\"led_g\":255,\"led_b\":128,\"led_w\":200,\"servo_1\":180,\"servo_2\":0,\"linear_actuator\":1024}";
-
-void parseJsonToStruct(const char* json, ModeData &data) {
-    StaticJsonDocument<200> doc;
-    deserializeJson(doc, json);
-
-    data.mode = doc["mode"];
-    data.led_r = doc["led_r"];
-    data.led_g = doc["led_g"];
-    data.led_b = doc["led_b"];
-    data.led_w = doc["led_w"];
-    data.servo_1 = doc["servo_1"];
-    data.servo_2 = doc["servo_2"];
-    data.linear_actuator = doc["linear_actuator"];
+void printModeData(const ModeData &data) {
+  Serial.print(" Mode: ");           Serial.println(data.mode);
+  Serial.print(" Brightness: ");     Serial.println(data.brightness);
+  Serial.print(" MonitorHeight: ");  Serial.println(data.monitor_height);
+  Serial.print(" MonitorTilt: ");    Serial.println(data.monitor_tilt);
+  Serial.print(" DeskHeight: ");     Serial.println(data.desk_height);
 }
 
-void printBinaryData(const ModeData &data) {
-    Serial.print("Binary Data: ");
-    Serial.print(data.mode, HEX); Serial.print(" ");
-    Serial.print(data.led_r, HEX); Serial.print(" ");
-    Serial.print(data.led_g, HEX); Serial.print(" ");
-    Serial.print(data.led_b, HEX); Serial.print(" ");
-    Serial.print(data.led_w, HEX); Serial.print(" ");
-    Serial.print(data.servo_1, HEX); Serial.print(" ");
-    Serial.print(data.servo_2, HEX); Serial.print(" ");
-    Serial.print((data.linear_actuator >> 8) & 0xFF, HEX); // High byte
-    Serial.print(" ");
-    Serial.print(data.linear_actuator & 0xFF, HEX); // Low byte
-    Serial.println();
-}
-
+// ---------------------------------------------------------------------
+// Setup
+// ---------------------------------------------------------------------
 void setup() {
-    Serial.begin(9600);
-    SPI.begin();
-    rc522.PCD_Init();
-    Serial.println("RFID 리더 초기화 완료.");
-    // 기본 인증키 0xFF로 초기화 (6바이트)
-    for (byte i = 0; i < 6; i++) {
-      key.keyByte[i] = 0xFF;
-    }
-    
-    parseJsonToStruct(json1, modeData1);
-    parseJsonToStruct(json2, modeData2);
-    parseJsonToStruct(json3, modeData3);
-    
-    printBinaryData(modeData1);
-    printBinaryData(modeData2);
-    printBinaryData(modeData3);
+  Serial.begin(115200);
+  SPI.begin();
+  rc522.PCD_Init();
+  Serial.println("RFID 리더 초기화 완료.");
+
+  // 기본 인증키 0xFF로 초기화 (6바이트)
+  for (byte i = 0; i < 6; i++) {
+    key.keyByte[i] = 0xFF;
+  }
+
+  // 기본 ModeData 초기값 설정
+  modeData1.mode = 1;
+  modeData1.brightness = 10;
+  modeData1.monitor_height = 20;
+  modeData1.monitor_tilt = 30;
+  modeData1.desk_height = 100;
+
+  modeData2.mode = 2;
+  modeData2.brightness = 50;
+  modeData2.monitor_height = 60;
+  modeData2.monitor_tilt = 70;
+  modeData2.desk_height = 19;
+
+  modeData3.mode = 3;
+  modeData3.brightness = 90;
+  modeData3.monitor_height = 100;
+  modeData3.monitor_tilt = 110;
+  modeData3.desk_height = 13;
 }
 
+// ---------------------------------------------------------------------
+// Main Loop
+// ---------------------------------------------------------------------
 void loop() {
-  // 카드 감지 및 UID 읽기 (한 번만 수행)
-  if (!rc522.PICC_IsNewCardPresent()) {
-    return;
-  }
-  if (!rc522.PICC_ReadCardSerial()) {
-    Serial.println("카드 시리얼 읽기 실패.");
-    return;
-  }
-  // 읽은 UID 출력 (디버깅용)
-  Serial.print("카드 감지됨, UID:");
-  for (byte i = 0; i < rc522.uid.size; i++) {
-    Serial.print(" ");
-    Serial.print(rc522.uid.uidByte[i], HEX);
-  }
-  Serial.println();
-
-  // RFID 데이터 읽기
-  ModeData myData;
-  MFRC522::StatusCode status;
-
-  // 블록 4 읽기 시도
-  status = readRFIDData(4, myData, &(rc522.uid));
-  if (status == MFRC522::STATUS_OK) {
-    Serial.println("RFID 데이터 읽기 성공:");
-    Serial.print("Mode: "); Serial.println(myData.mode);
-    Serial.print("LED(R): "); Serial.println(myData.led_r);
-    Serial.print("LED(G): "); Serial.println(myData.led_g);
-    Serial.print("LED(B): "); Serial.println(myData.led_b);
-    Serial.print("LED(W): "); Serial.println(myData.led_w);
-    Serial.print("Servo1: "); Serial.println(myData.servo_1);
-    Serial.print("Servo2: "); Serial.println(myData.servo_2);
-    Serial.print("Linear Actuator: "); Serial.println(myData.linear_actuator);
+  bool packetToSend = false;
+  
+  // 카드 미감지 시 새 카드 탐지
+  if (!cardActive) {
+    if (rc522.PICC_IsNewCardPresent() && rc522.PICC_ReadCardSerial()) {
+      memcpy(&storedUid, &rc522.uid, sizeof(rc522.uid));
+      cardActive = true;
+      Serial.println("RFID 카드 감지됨. 카드와의 세션을 유지합니다.");
+    }
   } else {
-    Serial.println("블록 4 읽기 실패.");
+    // 카드 세션 유지 중: 시리얼 명령 처리 (두 개의 정수값 기대)
+    if (Serial.available() >= 2) {
+      int functionCode = Serial.parseInt();  // 예: 0x04 또는 0x05
+      int controlValue = Serial.parseInt();    // 블록 번호: 4, 5, 또는 6
+
+      Serial.println("----------------------------------");
+      Serial.print("Function Code: ");
+      Serial.println(functionCode, HEX);
+      Serial.print("Control Value (Block): ");
+      Serial.println(controlValue);
+
+      if (controlValue != 4 && controlValue != 5 && controlValue != 6) {
+        Serial.println("ERROR: Invalid block number! Must be 4, 5, or 6.");
+        return;
+      }
+
+      switch (functionCode) {
+        case 0x00: // brightness
+          modeData1.brightness = (uint8_t)controlValue;
+          Serial.print("Set brightness to: ");
+          Serial.println(modeData1.brightness);
+          break;
+
+        case 0x04: // rfid_read
+        {
+          Serial.println("RFID 카드 읽기 명령.");
+          ModeData tempData;
+          if (readRFIDData(controlValue, tempData, &storedUid) == MFRC522::STATUS_OK) {
+            Serial.print("[Block ");
+            Serial.print(controlValue);
+            Serial.println("] 읽기 성공:");
+            printModeData(tempData);
+          } else {
+            Serial.print("[Block ");
+            Serial.print(controlValue);
+            Serial.println("] 읽기 실패.");
+          }
+        }
+          break;
+
+        case 0x05: // rfid_write
+        {
+          Serial.println("RFID 카드 쓰기 명령.");
+          if (writeRFIDData(controlValue, modeData1, &storedUid) == MFRC522::STATUS_OK) {
+            Serial.print("[Block ");
+            Serial.print(controlValue);
+            Serial.println("] 쓰기 성공 (modeData1).");
+          } else {
+            Serial.print("[Block ");
+            Serial.print(controlValue);
+            Serial.println("] 쓰기 실패.");
+          }
+        }
+          break;
+
+        default:
+          Serial.print("ERROR: Unknown function code (");
+          Serial.print(functionCode, HEX);
+          Serial.println("). Must be 0x04 for read or 0x05 for write.");
+          break;
+      }
+      packetToSend = true;
+    }
   }
-
-  // 블록 5 읽기 시도
-  status = readRFIDData(5, myData, &(rc522.uid));
-  if (status == MFRC522::STATUS_OK) {
-    Serial.println("RFID 데이터 읽기 성공:");
-    Serial.print("Mode: "); Serial.println(myData.mode);
-    Serial.print("LED(R): "); Serial.println(myData.led_r);
-    Serial.print("LED(G): "); Serial.println(myData.led_g);
-    Serial.print("LED(B): "); Serial.println(myData.led_b);
-    Serial.print("LED(W): "); Serial.println(myData.led_w);
-    Serial.print("Servo1: "); Serial.println(myData.servo_1);
-    Serial.print("Servo2: "); Serial.println(myData.servo_2);
-    Serial.print("Linear Actuator: "); Serial.println(myData.linear_actuator);
-  } else {
-    Serial.println("블록 5 읽기 실패.");
+  
+  // 패킷 전송: RFID 데이터 전송 (헤더 0xFE 사용)
+  if (packetToSend) {
+    Serial.write(0xFE);
+    Serial.write(modeData1.mode);
+    Serial.write(modeData1.brightness);
+    Serial.write(modeData1.monitor_height);
+    Serial.write(modeData1.monitor_tilt);
+    Serial.write(modeData1.desk_height);
+    packetToSend = false;
   }
-
-  // 블록 6 읽기 시도
-  status = readRFIDData(6, myData, &(rc522.uid));
-  if (status == MFRC522::STATUS_OK) {
-    Serial.println("RFID 데이터 읽기 성공:");
-    Serial.print("Mode: "); Serial.println(myData.mode);
-    Serial.print("LED(R): "); Serial.println(myData.led_r);
-    Serial.print("LED(G): "); Serial.println(myData.led_g);
-    Serial.print("LED(B): "); Serial.println(myData.led_b);
-    Serial.print("LED(W): "); Serial.println(myData.led_w);
-    Serial.print("Servo1: "); Serial.println(myData.servo_1);
-    Serial.print("Servo2: "); Serial.println(myData.servo_2);
-    Serial.print("Linear Actuator: "); Serial.println(myData.linear_actuator);
-  } else {
-    Serial.println("블록 6 읽기 실패.");
-  }
-
-//  // RFID 데이터 쓰기
-//  status = writeRFIDData(4, modeData1, &(rc522.uid));
-//  if (status == MFRC522::STATUS_OK) {
-//    Serial.println("RFID 데이터 쓰기 성공.");
-//  } else {
-//    Serial.println("블록 4 쓰기 실패.");
-//  }
-//
-//  status = writeRFIDData(5, modeData2, &(rc522.uid));
-//  if (status == MFRC522::STATUS_OK) {
-//    Serial.println("RFID 데이터 쓰기 성공.");
-//  } else {
-//    Serial.println("블록 5 쓰기 실패.");
-//  }
-//
-//  status = writeRFIDData(6, modeData3, &(rc522.uid));
-//  if (status == MFRC522::STATUS_OK) {
-//    Serial.println("RFID 데이터 쓰기 성공.");
-//  } else {
-//    Serial.println("블록 6 쓰기 실패.");
-//  }
-
-  // 카드 작업 후 통신 종료
-  rc522.PICC_HaltA();
-  rc522.PCD_StopCrypto1();
-  delay(3000); // 잠시 대기
+  
+  delay(100);
 }

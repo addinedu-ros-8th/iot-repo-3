@@ -17,10 +17,9 @@ from qt_material import apply_stylesheet
 # 글로벌 변수 및 설정
 # ---------------------------
 exit_flag = False
-client_conn = None  # 클라이언트 소켓 전역 변수
 
 HOST = '0.0.0.0'
-PORT = 2007
+PORT = 2000
 
 # 클라이언트 전송 시 동기화를 위한 lock
 client_lock = threading.Lock()
@@ -35,7 +34,7 @@ DB_NAME = 'ergodb'
 ser0 = None
 ser1 = None
 try:
-    ser0 = serial.Serial('/dev/ttyACM1', 9600, timeout=1)
+    ser0 = serial.Serial('/dev/ttyACM3', 9600, timeout=1)
     time.sleep(2)
     print("Dynamic Board에 연결되었습니다. (서버에서)")
 except Exception as e:
@@ -49,57 +48,30 @@ except Exception as e:
     print("Static Board 연결 오류:", e)
 
 # ---------------------------
-# 공통 함수: DB 삽입, 클라이언트 전송, 명령 전송
+# 서버 관련 함수들
 # ---------------------------
 def insert_into_db(data):
     """
-    JSON 데이터를 새 프로토콜에 맞게 MariaDB의 desk_info, log 테이블에 삽입.
-    desk_info 테이블:
-        light, desk_status, monitor_height, monitor_angle, desk_height
-    log 테이블:
-        user_id, function_code, mode, desk_info_id, request_id, timestamp
+    JSON 데이터를 MariaDB 'desk' 테이블에 삽입.
+    새로운 프로토콜 예:
+    {
+      "function_code": "CMD001",
+      "mode": "AUTO",
+      "desk_status": "ACTIVE",
+      "brightness": 200,
+      "monitor_height": 40,
+      "monitor_tilt": 15,
+      "desk_height": 75,
+      "request_id": "REQ20250225123456",
+      "timestamp": "2025-02-25T12:34:56Z"
+    }
     """
     try:
-        # desk_info 테이블에 삽입할 데이터 추출
-        light = data.get('brightness', 0)
-        desk_status_str = data.get('desk_status', "INACTIVE")
-        desk_status = 1 if str(desk_status_str).upper() == "ACTIVE" else 0
+        brightness = data.get('brightness', 0)
         monitor_height = data.get('monitor_height', 0)
-        monitor_angle = data.get('monitor_tilt', 0)  # monitor_tilt 값을 monitor_angle으로 사용
+        monitor_tilt = data.get('monitor_tilt', 0)
         desk_height = data.get('desk_height', 0)
-        
-        # log 테이블에 삽입할 데이터 추출
-        # function_code: 예) "CMD001"에서 숫자만 추출하여 정수형으로 변환
-        function_code_str = data.get('function_code', '0')
-        function_code = int(''.join(filter(str.isdigit, function_code_str))) if any(c.isdigit() for c in function_code_str) else 0
-        
-        # mode: 문자열이면 매핑, 숫자면 그대로 사용
-        mode_val = data.get('mode', 0)
-        if isinstance(mode_val, str):
-            if mode_val.upper() == "AUTO":
-                mode = 1
-            elif mode_val.upper() == "MANUAL":
-                mode = 2
-            else:
-                mode = 0
-        else:
-            mode = mode_val
-        
-        user_id = 1  # 기본 사용자 id (실제 상황에 맞게 수정 필요)
-        
-        request_id_str = data.get('request_id', '0')
-        try:
-            request_id = int(request_id_str)
-        except ValueError:
-            request_id = 0
-        
-        # timestamp 처리: ISO8601 형식 "YYYY-MM-DDTHH:MM:SSZ" → "YYYY-MM-DD HH:MM:SS"
-        timestamp_str = data.get('timestamp')
-        if timestamp_str:
-            timestamp = timestamp_str.replace('T', ' ').replace('Z', '')
-        else:
-            timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-        
+
         connection = pymysql.connect(
             host=DB_HOST,
             user=DB_USER,
@@ -108,29 +80,23 @@ def insert_into_db(data):
             charset='utf8mb4',
             cursorclass=pymysql.cursors.DictCursor
         )
-        
         with connection.cursor() as cursor:
-            # desk_info 테이블에 데이터 삽입
-            sql_desk_info = """
-            INSERT INTO desk_info (light, desk_status, monitor_height, monitor_angle, desk_height)
-            VALUES (%s, %s, %s, %s, %s)
+            # desk 테이블에 brightness, monitor_height, monitor_tilt, desk_height 컬럼을 삽입
+            # 필요에 따라 function_code, mode, desk_status, request_id, timestamp 등의 컬럼도 추가할 수 있습니다.
+            sql = """
+            INSERT INTO desk (brightness, monitor_height, monitor_tilt, desk_height)
+            VALUES (%s, %s, %s, %s);
             """
-            cursor.execute(sql_desk_info, (light, desk_status, monitor_height, monitor_angle, desk_height))
-            desk_info_id = cursor.lastrowid
-            
-            # log 테이블에 데이터 삽입
-            sql_log = """
-            INSERT INTO log (user_id, function_code, mode, desk_info_id, request_id, timestamp)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            """
-            cursor.execute(sql_log, (user_id, function_code, mode, desk_info_id, request_id, timestamp))
-            
+            cursor.execute(sql, (
+                brightness,
+                monitor_height,
+                monitor_tilt,
+                desk_height
+            ))
             connection.commit()
             print("DB에 데이터 삽입 완료:", data)
-            
     except Exception as e:
         print("DB 삽입 오류:", e)
-
 
 def send_to_client(conn, msg):
     """클라이언트 소켓에 안전하게 메시지 전송"""
@@ -139,19 +105,6 @@ def send_to_client(conn, msg):
             conn.sendall(msg.encode('utf-8'))
     except Exception as e:
         print("클라이언트 전송 오류:", e)
-
-def send_command(data):
-    """전역 client_conn을 사용해 명령 메시지 전송"""
-    global client_conn
-    if client_conn:
-        try:
-            msg = json.dumps(data, separators=(',', ':')) + "\n"
-            send_to_client(client_conn, msg)
-            print("명령 전송:", msg)
-        except Exception as e:
-            print("명령 전송 중 오류:", e)
-    else:
-        print("클라이언트 연결 없음. 명령 전송 실패.")
 
 def keyboard_listener():
     """키보드(ESC 키) 입력 감지: 필요시 사용 (현재는 GUI 창 종료로 대체 가능)"""
@@ -219,7 +172,6 @@ def arduino_listener(ser, port_name, client_conn):
             break
 
 def run_server():
-    global client_conn
     print("서버 스레드 시작됨", flush=True)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
         server_socket.bind((HOST, PORT))
@@ -231,7 +183,6 @@ def run_server():
         while not exit_flag:
             try:
                 conn, addr = server_socket.accept()
-                client_conn = conn  # 전역에 저장
                 break
             except socket.timeout:
                 continue
@@ -379,33 +330,16 @@ class LEDControlScreen(QWidget):
         if self.brightness < 9:
             self.brightness += 1
             self.brightness_label.setText(str(self.brightness))
-            self.send_led_command()
 
     def decrease_brightness(self):
         if self.brightness > 0:
             self.brightness -= 1
             self.brightness_label.setText(str(self.brightness))
-            self.send_led_command()
-
-    def send_led_command(self):
-        data = {
-            "function_code": "CMD001",
-            "mode": "AUTO",
-            "desk_status": "ACTIVE",
-            "brightness": self.brightness,
-            "monitor_height": 0,
-            "monitor_tilt": 0,
-            "desk_height": 0,
-            "request_id": "desk_gui",
-            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        }
-        send_command(data)
 
 class DeskControlScreen(QWidget):
     def __init__(self, stacked_widget):
         super().__init__()
         self.stacked_widget = stacked_widget
-        self.desk_height = 0  # 현재 책상 높이 상태 변수
         layout = QVBoxLayout()
         self.label = QLabel("Desk Control")
         self.label.setAlignment(Qt.AlignCenter)
@@ -416,8 +350,6 @@ class DeskControlScreen(QWidget):
         btn_down = QPushButton("▼")
         btn_up.setFixedSize(120, 120)
         btn_down.setFixedSize(120, 120)
-        btn_up.clicked.connect(self.increase_desk_height)
-        btn_down.clicked.connect(self.decrease_desk_height)
         grid_layout.addWidget(btn_up, 0, 1)
         grid_layout.addWidget(btn_down, 2, 1)
         layout.addLayout(grid_layout)
@@ -428,36 +360,10 @@ class DeskControlScreen(QWidget):
         layout.addWidget(back_btn, alignment=Qt.AlignCenter)
         self.setLayout(layout)
     
-    def increase_desk_height(self):
-        if self.desk_height < 100:
-            self.desk_height += 5
-            self.send_desk_command()
-    
-    def decrease_desk_height(self):
-        if self.desk_height > 0:
-            self.desk_height -= 5
-            self.send_desk_command()
-    
-    def send_desk_command(self):
-        data = {
-            "function_code": "CMD001",
-            "mode": "AUTO",
-            "desk_status": "ACTIVE",
-            "brightness": 0,
-            "monitor_height": 0,
-            "monitor_tilt": 0,
-            "desk_height": self.desk_height,
-            "request_id": "desk_gui",
-            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        }
-        send_command(data)
-    
 class MonitorControlScreen(QWidget):
     def __init__(self, stacked_widget):
         super().__init__()
         self.stacked_widget = stacked_widget
-        self.monitor_height = 30
-        self.monitor_tilt = 45
         layout = QVBoxLayout()
         self.label = QLabel("Monitor Control")
         self.label.setAlignment(Qt.AlignCenter)
@@ -472,10 +378,6 @@ class MonitorControlScreen(QWidget):
         btn_back.setFixedSize(100, 100)
         btn_up.setFixedSize(100, 100)
         btn_down.setFixedSize(100, 100)
-        btn_front.clicked.connect(self.set_front)
-        btn_back.clicked.connect(self.set_back)
-        btn_up.clicked.connect(self.increase_monitor_height)
-        btn_down.clicked.connect(self.decrease_monitor_height)
         grid_layout.addWidget(btn_front, 0, 0)
         grid_layout.addWidget(btn_back, 1, 0)
         grid_layout.addWidget(btn_up, 0, 1)
@@ -487,42 +389,6 @@ class MonitorControlScreen(QWidget):
         back_btn.clicked.connect(lambda: self.stacked_widget.setCurrentIndex(1))
         layout.addWidget(back_btn, alignment=Qt.AlignCenter)
         self.setLayout(layout)
-        
-    def increase_monitor_height(self):
-        if self.monitor_height < 90:
-            self.monitor_height += 5
-            self.send_monitor_command()
-    
-    def decrease_monitor_height(self):
-        if self.monitor_height > 0:
-            self.monitor_height -= 5
-            self.send_monitor_command()
-    
-    def set_front(self):
-        # Front: 모니터 기울기를 감소
-        if self.monitor_tilt > 0:
-            self.monitor_tilt -= 5
-            self.send_monitor_command()
-    
-    def set_back(self):
-        # Back: 모니터 기울기를 증가
-        if self.monitor_tilt < 90:
-            self.monitor_tilt += 5
-            self.send_monitor_command()
-    
-    def send_monitor_command(self):
-        data = {
-            "function_code": "CMD001",
-            "mode": "AUTO",
-            "desk_status": "ACTIVE",
-            "brightness": 0,
-            "monitor_height": self.monitor_height,
-            "monitor_tilt": self.monitor_tilt,
-            "desk_height": 0,
-            "request_id": "desk_gui",
-            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        }
-        send_command(data)
         
 class MainWindow(QWidget):
     def __init__(self):
