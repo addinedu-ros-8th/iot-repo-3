@@ -178,6 +178,7 @@ void processSerialCommands() {
             Serial.println("] 읽기 성공:");
             printModeData(tempData);
             sendModeData(tempData);
+            // Halt the card to end the session
             rc522.PICC_HaltA();
             // Optionally, reset cardActive if needed
             cardActive = false;
@@ -186,7 +187,7 @@ void processSerialCommands() {
             Serial.print(block);
             Serial.println("] 읽기 실패.");
           }
-        } 
+        }
         else if (functionCode == 0x05) { // 쓰기 명령
           Serial.println("RFID 카드 쓰기 명령.");
           if (writeRFIDData(block, modeData1, &storedUid) == MFRC522::STATUS_OK) {
