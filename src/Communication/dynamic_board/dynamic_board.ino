@@ -27,8 +27,8 @@ uint8_t ultrasonicDistance = 0;
 
 void setup() {
   Serial.begin(115200);
-  servo1.attach(9);
-  servo2.attach(10);
+  servo1.attach(12);
+  servo2.attach(13);
   
   // 물리 버튼 입력 설정
   pinMode(buttonUp1, INPUT);
@@ -86,22 +86,27 @@ void loop() {
       uint8_t cmd = Serial.read();
       if (cmd == 1) {
         servoAngle2 += 5;
+        servo2.write(servoAngle2);
         if (servoAngle2 > 180) servoAngle2 = 180;
       } else {
         servoAngle2 -= 5;
         if (servoAngle2 < 0) servoAngle2 = 0;
+        servo2.write(servoAngle2);
       }
       packetToSend = true;
     }
+    
     // 모니터 Up/Down 제어 (서보1 조정)
     else if (header == 0xFB) {
       while (Serial.available() <= 0) { ; }
       uint8_t cmd = Serial.read();
       if (cmd == 1) {
         servoAngle1 += 5;
+        servo1.write(servoAngle1);
         if (servoAngle1 > 180) servoAngle1 = 180;
       } else {
         servoAngle1 -= 5;
+        servo1.write(servoAngle1);
         if (servoAngle1 < 0) servoAngle1 = 0;
       }
       packetToSend = true;
@@ -116,24 +121,28 @@ void loop() {
     if (digitalRead(buttonUp1) == HIGH) {
       servoAngle1 += 5;
       if (servoAngle1 > 180) servoAngle1 = 180;
+      servo1.write(servoAngle1);
       angleChanged = true;
       delay(200);
     }
     if (digitalRead(buttonDown1) == HIGH) {
       servoAngle1 -= 5;
       if (servoAngle1 < 0) servoAngle1 = 0;
+      servo1.write(servoAngle1);
       angleChanged = true;
       delay(200);
     }
     if (digitalRead(buttonUp2) == HIGH) {
       servoAngle2 += 5;
       if (servoAngle2 > 180) servoAngle2 = 180;
+      servo2.write(servoAngle2);
       angleChanged = true;
       delay(200);
     }
     if (digitalRead(buttonDown2) == HIGH) {
       servoAngle2 -= 5;
       if (servoAngle2 < 0) servoAngle2 = 0;
+      servo2.write(servoAngle2);
       angleChanged = true;
       delay(200);
     }
