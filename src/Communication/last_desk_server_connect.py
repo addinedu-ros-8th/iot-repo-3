@@ -1,3 +1,5 @@
+# desk_gui.py
+
 import sys
 import serial
 import struct
@@ -5,10 +7,12 @@ import json
 import threading
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
+import datetime
 
-# ----------------------------
-# GUI 코드
-# ----------------------------
+# Socket.IO 클라이언트 라이브러리
+import socketio
+
+
 class MainScreen(QWidget):
     def __init__(self, stacked_widget, serial_writer):
         super().__init__()
@@ -49,6 +53,7 @@ class MainScreen(QWidget):
         self.serial_writer.write_command(packet)
         print(f"RFID Read 명령 전송: {packet} (블록 {block})")
 
+
 class ControlModeScreen(QWidget):
     def __init__(self, stacked_widget):
         super().__init__()
@@ -70,11 +75,16 @@ class ControlModeScreen(QWidget):
         layout.addLayout(grid_layout)
         self.setLayout(layout)
 
+
 class LEDControlScreen(QWidget):
-    def __init__(self, stacked_widget, serial_writer):
+    def __init__(self, stacked_widget, serial_writer, main_window):
         super().__init__()
         self.stacked_widget = stacked_widget
         self.serial_writer = serial_writer  # static_board에 명령 전송
+
+        # MainWindow 참조 (현재 상태 갱신 + 서버 전송용)
+        self.main_window = main_window
+
         layout = QVBoxLayout()
 
         self.label = QLabel("LED Control")
@@ -115,6 +125,10 @@ class LEDControlScreen(QWidget):
             self.serial_writer.write_command(packet)
             print(json.dumps({"desk_gui": "LED up clicked", "led_brightness": self.data_value}, indent=4))
 
+            # MainWindow에 LED 밝기 반영 후 서버로 전송
+            self.main_window.current_led_brightness = self.data_value
+            self.main_window.send_data_to_server()
+
     def decrease_data(self):
         if self.data_value > 0:
             self.data_value -= 1
@@ -123,15 +137,24 @@ class LEDControlScreen(QWidget):
             self.serial_writer.write_command(packet)
             print(json.dumps({"desk_gui": "LED down clicked", "led_brightness": self.data_value}, indent=4))
 
+            # MainWindow에 LED 밝기 반영 후 서버로 전송
+            self.main_window.current_led_brightness = self.data_value
+            self.main_window.send_data_to_server()
+
     def update_brightness(self, value):
         self.data_value = value
         self.data_label.setText(str(value))
 
+
 class DeskControlScreen(QWidget):
-    def __init__(self, stacked_widget, serial_writer):
+    def __init__(self, stacked_widget, serial_writer, main_window):
         super().__init__()
         self.stacked_widget = stacked_widget
         self.serial_writer = serial_writer
+
+        # MainWindow 참조
+        self.main_window = main_window
+
         layout = QVBoxLayout()
 
         self.label = QLabel("Desk Control")
@@ -163,18 +186,36 @@ class DeskControlScreen(QWidget):
         self.btn_down.clicked.connect(self.send_down_command)
 
     def send_up_command(self):
+        # 1) 동적 보드로 명령 전송
         packet = struct.pack('BB', 0xFD, 0)
         self.serial_writer.write_command(packet)
 
+        # 2) GUI 측 값도 +1 (임시) 반영 후 서버 전송
+        self.main_window.current_desk_height += 1
+        self.data_value_label.setText(str(self.main_window.current_desk_height))
+        self.main_window.send_data_to_server()
+
     def send_down_command(self):
+        # 1) 동적 보드로 명령 전송
         packet = struct.pack('BB', 0xFD, 1)
         self.serial_writer.write_command(packet)
 
+        # 2) GUI 측 값도 -1 (임시) 반영 후 서버 전송
+        if self.main_window.current_desk_height > 0:
+            self.main_window.current_desk_height -= 1
+        self.data_value_label.setText(str(self.main_window.current_desk_height))
+        self.main_window.send_data_to_server()
+
+
 class MonitorControlScreen(QWidget):
-    def __init__(self, stacked_widget, serial_writer):
+    def __init__(self, stacked_widget, serial_writer, main_window):
         super().__init__()
         self.stacked_widget = stacked_widget
         self.serial_writer = serial_writer
+
+        # MainWindow 참조
+        self.main_window = main_window
+
         layout = QVBoxLayout()
 
         self.label = QLabel("Monitor Control")
@@ -213,21 +254,58 @@ class MonitorControlScreen(QWidget):
         self.btn_up.clicked.connect(self.send_up_command)
         self.btn_down.clicked.connect(self.send_down_command)
 
+        # 초기 텍스트
+        self.data_label_front_back.setText(str(self.main_window.current_monitor_angle))
+        self.data_label_up_down.setText(str(self.main_window.current_monitor_height))
+
     def send_front_command(self):
-        packet = struct.pack('BB', 0xFC, 1)
+        # 1) 동적 보드로 명령 전송
+        # 여기서는 "monitor tilt = 1" 이라는 예시
+        # 실제로는 monitor_angle을 +1 하는 식으로 구현할 수도 있음
+        new_angle = self.main_window.current_monitor_angle + 1
+        if new_angle > 255:
+            new_angle = 255
+
+        packet = struct.pack('BB', 0xFC, new_angle)
         self.serial_writer.write_command(packet)
+
+        # 2) GUI 측 값도 업데이트 후 서버 전송
+        self.main_window.current_monitor_angle = new_angle
+        self.data_label_front_back.setText(str(new_angle))
+        self.main_window.send_data_to_server()
 
     def send_back_command(self):
-        packet = struct.pack('BB', 0xFC, 0)
+        # monitor tilt -= 1
+        new_angle = max(0, self.main_window.current_monitor_angle - 1)
+        packet = struct.pack('BB', 0xFC, new_angle)
         self.serial_writer.write_command(packet)
+
+        self.main_window.current_monitor_angle = new_angle
+        self.data_label_front_back.setText(str(new_angle))
+        self.main_window.send_data_to_server()
 
     def send_up_command(self):
-        packet = struct.pack('BB', 0xFB, 1)
+        # monitor height += 1
+        new_height = self.main_window.current_monitor_height + 1
+        if new_height > 255:
+            new_height = 255
+        packet = struct.pack('BB', 0xFB, new_height)
         self.serial_writer.write_command(packet)
 
+        self.main_window.current_monitor_height = new_height
+        self.data_label_up_down.setText(str(new_height))
+        self.main_window.send_data_to_server()
+
     def send_down_command(self):
-        packet = struct.pack('BB', 0xFB, 0)
+        # monitor height -= 1
+        new_height = max(0, self.main_window.current_monitor_height - 1)
+        packet = struct.pack('BB', 0xFB, new_height)
         self.serial_writer.write_command(packet)
+
+        self.main_window.current_monitor_height = new_height
+        self.data_label_up_down.setText(str(new_height))
+        self.main_window.send_data_to_server()
+
 
 class MainWindow(QWidget):
     def __init__(self):
@@ -236,9 +314,23 @@ class MainWindow(QWidget):
         self.setFixedSize(320, 480)
         self.stacked_widget = QStackedWidget()
 
+        # Socket.IO 클라이언트 생성 및 서버 연결
+        self.sio = socketio.Client()
+        try:
+            self.sio.connect("http://192.168.0.30:5007")
+            print("Socket.IO connected to server.")
+        except Exception as e:
+            print("Socket.IO connection failed:", e)
+
+        # 현재 상태값 저장용 변수 (서버로 보낼 값)
+        self.current_led_brightness = 0
+        self.current_monitor_height = 0
+        self.current_monitor_angle = 0
+        self.current_desk_height = 0
+
         # 동적 보드와 정적 보드의 시리얼 리더 생성
         self.serial_reader1 = SerialReader(port='/dev/ttyACM2', baudrate=115200, board_label="dynamic_board")
-        self.serial_reader2 = SerialReader(port='/dev/ttyACM0', baudrate=9600, board_label="static_board")
+        self.serial_reader2 = SerialReader(port='/dev/ttyACM1', baudrate=9600, board_label="static_board")
 
         self.serial_reader1.dataReceived.connect(self.handle_serial_data)
         self.serial_reader2.dataReceived.connect(self.handle_serial_data)
@@ -251,11 +343,13 @@ class MainWindow(QWidget):
         # MainScreen에 serial_reader2 (static_board)를 전달
         self.main_screen = MainScreen(self.stacked_widget, serial_writer=self.serial_reader2)
         self.control_mode_screen = ControlModeScreen(self.stacked_widget)
-        self.led_control_screen = LEDControlScreen(self.stacked_widget, serial_writer=self.serial_reader2)
-        self.monitor_control_screen = MonitorControlScreen(self.stacked_widget, serial_writer=self.serial_reader1)
-        self.desk_control_screen = DeskControlScreen(self.stacked_widget, serial_writer=self.serial_reader1)
 
-        self.stacked_widget.addWidget(self.main_screen)           # index 0
+        # LED / Monitor / Desk 컨트롤 화면에 MainWindow 참조를 넘겨준다
+        self.led_control_screen = LEDControlScreen(self.stacked_widget, serial_writer=self.serial_reader2, main_window=self)
+        self.monitor_control_screen = MonitorControlScreen(self.stacked_widget, serial_writer=self.serial_reader1, main_window=self)
+        self.desk_control_screen = DeskControlScreen(self.stacked_widget, serial_writer=self.serial_reader1, main_window=self)
+
+        self.stacked_widget.addWidget(self.main_screen)             # index 0
         self.stacked_widget.addWidget(self.control_mode_screen)     # index 1
         self.stacked_widget.addWidget(self.led_control_screen)      # index 2
         self.stacked_widget.addWidget(self.monitor_control_screen)  # index 3
@@ -265,26 +359,60 @@ class MainWindow(QWidget):
         layout.addWidget(self.stacked_widget)
         self.setLayout(layout)
 
+    def send_data_to_server(self):
+        """현재 상태를 서버로 전송하는 메서드"""
+        data = {
+            "timestamp": datetime.datetime.now().isoformat(),
+            "light": self.current_led_brightness,
+            "monitor_height": self.current_monitor_height,
+            "monitor_angle": self.current_monitor_angle,
+            "desk_height": self.current_desk_height
+        }
+        if self.sio.connected:
+            self.sio.emit('send_data', data)
+            print("Sent data to server:", data)
+        else:
+            print("Socket.IO not connected. Could not send data.")
+
     @pyqtSlot(str, int, int, int)
     def handle_serial_data(self, board, monitor_height, monitor_tilt, desk_height):
+        """
+        시리얼로부터 0xFF 헤더 데이터를 수신하면 호출됨.
+        - dynamic_board: 3바이트(monitor_height, monitor_tilt, desk_height)
+        - static_board: 1바이트(led_brightness)로 처리
+        """
         if board == "dynamic_board":
             self.monitor_control_screen.data_label_up_down.setText(str(monitor_height))
             self.monitor_control_screen.data_label_front_back.setText(str(monitor_tilt))
             self.desk_control_screen.data_value_label.setText(str(desk_height))
+
+            # MainWindow 내부 상태 갱신
+            self.current_monitor_height = monitor_height
+            self.current_monitor_angle = monitor_tilt
+            self.current_desk_height = desk_height
+
             data_dict = {
                 "board": board,
-                "moniter_height": monitor_height,
-                "moniter_tilt": monitor_tilt,
+                "monitor_height": monitor_height,
+                "monitor_tilt": monitor_tilt,
                 "desk_height": desk_height
             }
             print(json.dumps(data_dict, indent=4))
+            # 서버로 전송
+            self.send_data_to_server()
+
         elif board == "static_board":
+            # LED 밝기 정보 수신 -> LEDControlScreen 업데이트
             self.led_control_screen.update_brightness(monitor_height)
+            self.current_led_brightness = monitor_height
+
             data_dict = {
                 "board": board,
                 "led_brightness": monitor_height
             }
             print(json.dumps(data_dict, indent=4))
+            # 서버로 전송
+            self.send_data_to_server()
 
     @pyqtSlot(str)
     def handle_rfid_data(self, uid):
@@ -299,10 +427,9 @@ class MainWindow(QWidget):
             parts = data_str.split(',')
             mode = int(parts[0].split(':')[1].strip())
             brightness_val = int(parts[1].split(':')[1].strip())
-            monitor_part = parts[2].split(':')[1].strip()  # Expected format "H/T"
+            monitor_part = parts[2].split(':')[1].strip()  # "H/T"
             monitor_height, monitor_tilt = [int(x.strip()) for x in monitor_part.split('/')]
             desk_height_val = int(parts[3].split(':')[1].strip())
-            print("data read")
         except Exception as e:
             print("RFID 데이터 파싱 에러:", e)
             return
@@ -313,42 +440,34 @@ class MainWindow(QWidget):
         self.monitor_control_screen.data_label_front_back.setText(str(monitor_tilt))
         self.desk_control_screen.data_value_label.setText(str(desk_height_val))
 
-        # --- Send control data separately ---
-        # 1. Send LED brightness command to the static board.
-        #    Using header 0xFF with brightness value.
+        # MainWindow 내부 상태 갱신
+        self.current_led_brightness = brightness_val
+        self.current_monitor_height = monitor_height
+        self.current_monitor_angle = monitor_tilt
+        self.current_desk_height = desk_height_val
+
+        # 하드웨어로도 다시 전송
         led_packet = struct.pack('BB', 0xFF, brightness_val)
         self.serial_reader2.write_command(led_packet)
         print("Sent LED brightness command to static board:", led_packet)
-        
-        # 2. Send monitor up/down command to the dynamic board.
-        #    Using header 0xFB and the monitor height value.
+
         monitor_updown_packet = struct.pack('BB', 0xFB, monitor_height)
         self.serial_reader1.write_command(monitor_updown_packet)
         print("Sent monitor up/down command to dynamic board:", monitor_updown_packet)
-        
-        # 3. Send monitor front/back command to the dynamic board.
-        #    Using header 0xFC and the monitor tilt value.
+
         monitor_frontback_packet = struct.pack('BB', 0xFC, monitor_tilt)
         self.serial_reader1.write_command(monitor_frontback_packet)
         print("Sent monitor front/back command to dynamic board:", monitor_frontback_packet)
-        
-        # # 4. Send desk control command to the dynamic board.
-        # #    Using header 0xFD and the desk height value.
-        # desk_packet = struct.pack('BB', 0xFD, desk_height_val)
-        # self.serial_reader1.write_command(desk_packet)
-        # print("Sent desk control command to dynamic board:", desk_packet)
-        
-        # For debugging or visual feedback, append just the mode value to the main GUI label.
+
         current_text = self.main_screen.label.text()
         new_text = current_text + "\nMode: " + str(mode)
         self.main_screen.label.setText(new_text)
         print(json.dumps({"desk_gui": "RFID ModeData updated", "mode": mode}, indent=4))
 
+        # 서버로 전송
+        self.send_data_to_server()
 
 
-# ----------------------------
-# 시리얼 리더 (QThread 사용, 쓰기 기능 포함)
-# ----------------------------
 class SerialReader(QThread):
     dataReceived = pyqtSignal(str, int, int, int)  # board, monitor_height, monitor_tilt, desk_height
     rfidReceived = pyqtSignal(str)  # RFID UID를 문자열로 전달
@@ -373,19 +492,21 @@ class SerialReader(QThread):
                 if self.ser.in_waiting > 0:
                     header = self.ser.read(1)
                     if header == b'\xFF':
-                        # LED 제어나 동적 보드 데이터 처리
+                        # LED or dynamic board data
                         if self.board_label == "static_board":
+                            # static_board → LED 밝기 1바이트 + (테스트용) 2바이트 더?
                             data = self.ser.read(3)
                             if len(data) == 3:
                                 led_brightness = data[0]
                                 self.dataReceived.emit(self.board_label, led_brightness, 0, 0)
                         else:
+                            # dynamic_board → 3바이트 (monitor_height, monitor_tilt, desk_height)
                             data = self.ser.read(3)
                             if len(data) == 3:
                                 monitor_height, monitor_tilt, desk_height = struct.unpack('BBB', data)
                                 self.dataReceived.emit(self.board_label, monitor_height, monitor_tilt, desk_height)
                     elif header == b'\xFA':
-                        # RFID UID 패킷 처리
+                        # RFID UID 패킷
                         uid_length_byte = self.ser.read(1)
                         if uid_length_byte:
                             uid_length = uid_length_byte[0]
@@ -395,7 +516,7 @@ class SerialReader(QThread):
                                 self.rfidReceived.emit(uid_str)
                                 print(json.dumps({"desk_gui": "RFID UID received", "uid": uid_str}, indent=4))
                     elif header == b'\xFB':
-                        # RFID 내부 데이터 패킷 처리 (5바이트: ModeData)
+                        # RFID 내부 데이터 패킷 (5바이트: ModeData)
                         data_bytes = self.ser.read(5)
                         if len(data_bytes) == 5:
                             mode = data_bytes[0]
@@ -421,11 +542,10 @@ class SerialReader(QThread):
             except Exception as e:
                 print(f"Error writing to {self.port}: {e}")
 
-# ----------------------------
-# 메인 실행
-# ----------------------------
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
     sys.exit(app.exec_())
+
