@@ -23,7 +23,7 @@ const int echoPin = 8;
 // 초기 서보 각도 및 초음파 센서 값
 int servoAngle1 = 90;  // Monitor Up/Down (높이)
 int servoAngle2 = 90;  // Monitor Front/Back (틸트)
-uint8_t ultrasonicDistance = 0;
+uint8_t ultrasonicDistance = 0;  // 초음파 센서로 측정한 거리 (desk_height)
 
 // 추가: 책상 높이를 저장 (절대값 명령 수신 시 업데이트)
 int currentDeskHeight = 0;
@@ -187,12 +187,22 @@ void loop() {
     }
   }
   
-  // 3. 패킷 송신 (헤더 0xFF)
+  // 3. 초음파 센서를 이용해 desk_height 값을 업데이트 (HC-SR04)
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  unsigned long duration = pulseIn(echoPin, HIGH);
+  // 거리(cm) = duration / 58 (대략적인 계산)
+  ultrasonicDistance = duration / 58;
+  
+  // 4. 패킷 송신 (헤더 0xFF)
   if (packetToSend) {
     Serial.write(0xFF);
     Serial.write((uint8_t)servoAngle1);
     Serial.write((uint8_t)servoAngle2);
-    Serial.write((uint8_t)ultrasonicDistance);
+    Serial.write((uint8_t)ultrasonicDistance);  // 초음파 센서 측정값을 desk_height로 전송
   }
   
   delay(100);
