@@ -25,10 +25,6 @@ Team 3. DeskMate(IOT Project)
 ***
 ## :hourglass_flowing_sand: 프로젝트 설계 및 개발 계획
 
-
-<<<<<<< HEAD
-***
-=======
 ***
 
 # IOT 스마트데스크 프로젝트
@@ -47,38 +43,38 @@ IOT 스마트데스크 프로젝트는 사용자의 업무 및 학습 환경을 
 ## 2. 프로젝트 설계
 
 ### 2-1. Scenario
-- **사용 시나리오 예시**  
-  - 사용자가 책상 앞에 앉으면, 센서가 사용자를 인식하여 자동으로 조명을 켬  
-  - 데스크와 모니터 높이를 사용자 신체에 맞게 조절  
-  - 일정 시간이 지나면 자세 교정 알림 및 데스크 높낮이 자동 전환  
+**RFID SUCCESS**
+![Image](https://github.com/user-attachments/assets/19a7bb6e-49a2-461e-82b3-b331f8d1313a)                             
+
+**RFID ERROR**
+![Image](https://github.com/user-attachments/assets/768b0ca8-4562-4f66-b15c-38c2368a37e5)                            
+
+**Manual Control Success**
+![Image](https://github.com/user-attachments/assets/60edacdf-2391-4af6-bd41-50f43be6db3b)                           
+
+**Hardware ERROR**
+![Image](https://github.com/user-attachments/assets/7b8617cd-9413-4d3d-bbfc-0b6e83224b6b)                         
 
 ### 2-2. System Requirements
-- **하드웨어**  
-  - 센서(조도 센서, 거리 센서, 무게 센서 등)  
-  - 데스크 높낮이 모터 및 제어 모듈  
-  - 모니터 각도/높낮이 제어 모듈  
-  - 조명 장치(스탠드, LED 조명 등)
-- **소프트웨어**  
-  - 마이크로컨트롤러(Arduino, ESP32 등) 펌웨어  
-  - 서버/클라우드(데이터 수집 및 분석)  
-  - 사용자 인터페이스(웹/모바일 앱)  
-
-### 2-3. System Architecture
-- **센서 데이터 흐름**: 센서 → 마이크로컨트롤러 → 서버(또는 클라우드)  
-- **제어 명령 흐름**: 사용자 앱(또는 웹) → 서버 → 마이크로컨트롤러 → 모터/조명  
+**하드웨어**  
+  ![Image](https://github.com/user-attachments/assets/1266ac6a-ce54-477e-8a54-9d3f5cb76b88)
+**소프트웨어**  
+   ![Image](https://github.com/user-attachments/assets/ad806e1d-4484-4053-9f55-4f44a2ff73a2)
 
 ### 2-4. Desk 기구설계
-- **데스크 프레임 구조**  
-  - 모터 장착 위치 및 기어 구조  
-  - 센서 부착 위치(앞, 뒤, 양 측면 등)  
-- **안전성 고려**  
-  - 기계식 안전 장치, 과부하 감지  
+![Image](https://github.com/user-attachments/assets/58cbd91a-8c2e-4470-9615-f38e8b717d34) 
 
 ### 2-5. GUI 화면 설계
-- **주요 화면**  
-  - 센서 상태 모니터링 대시보드(온도, 습도, 조도, 사용자 유무 등)  
-  - 데스크/모니터 제어 화면(높낮이, 각도 등 제어 슬라이더)  
-  - 사용자 프로필 및 맞춤 세팅(신체 정보 기반 자동 세팅)  
+**Desk GUI**  
+![Image](https://github.com/user-attachments/assets/a4cfb278-3b02-491c-bfa8-2bf264f3b5bb)
+![Image](https://github.com/user-attachments/assets/3dc70b8c-56c4-4881-a520-494bb41ab218)
+![Image](https://github.com/user-attachments/assets/bb876e61-491b-49b0-bef2-4f989fec1e86)
+![Image](https://github.com/user-attachments/assets/77213b30-df7d-41c1-99f2-b588ba3f5f26)
+![Image](https://github.com/user-attachments/assets/28a7e275-4b12-4d80-8b63-f6083eb957ab)             
+
+**User GUI**
+![Image](https://github.com/user-attachments/assets/9b633cb9-929b-46c4-a888-866ce1624e2d)
+![Image](https://github.com/user-attachments/assets/803766fb-a3a0-4b93-ace6-d8df14d3fdd8)
 
 ## 3. 프로젝트 기능 설명
 
