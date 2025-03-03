@@ -44,18 +44,20 @@ IOT 스마트데스크 프로젝트는 사용자의 업무 및 학습 환경을 
 
 ### 2-1. Scenario
 **RFID SUCCESS**
-![Image](https://github.com/user-attachments/assets/19a7bb6e-49a2-461e-82b3-b331f8d1313a)                             
+	![Image](https://github.com/user-attachments/assets/19a7bb6e-49a2-461e-82b3-b331f8d1313a)                             
 
 **RFID ERROR**
-![Image](https://github.com/user-attachments/assets/768b0ca8-4562-4f66-b15c-38c2368a37e5)                            
+	![Image](https://github.com/user-attachments/assets/768b0ca8-4562-4f66-b15c-38c2368a37e5)                            
 
 **Manual Control Success**
-![Image](https://github.com/user-attachments/assets/60edacdf-2391-4af6-bd41-50f43be6db3b)                           
+	![Image](https://github.com/user-attachments/assets/60edacdf-2391-4af6-bd41-50f43be6db3b)                           
 
 **Hardware ERROR**
-![Image](https://github.com/user-attachments/assets/7b8617cd-9413-4d3d-bbfc-0b6e83224b6b)                         
+	![Image](https://github.com/user-attachments/assets/7b8617cd-9413-4d3d-bbfc-0b6e83224b6b)                         
 
 ### 2-2. System Requirements
+
+### 2-3. System Architecture
 **하드웨어**  
   ![Image](https://github.com/user-attachments/assets/1266ac6a-ce54-477e-8a54-9d3f5cb76b88)
 **소프트웨어**  
@@ -66,15 +68,15 @@ IOT 스마트데스크 프로젝트는 사용자의 업무 및 학습 환경을 
 
 ### 2-5. GUI 화면 설계
 **Desk GUI**  
-![Image](https://github.com/user-attachments/assets/a4cfb278-3b02-491c-bfa8-2bf264f3b5bb)
-![Image](https://github.com/user-attachments/assets/3dc70b8c-56c4-4881-a520-494bb41ab218)
-![Image](https://github.com/user-attachments/assets/bb876e61-491b-49b0-bef2-4f989fec1e86)
-![Image](https://github.com/user-attachments/assets/77213b30-df7d-41c1-99f2-b588ba3f5f26)
-![Image](https://github.com/user-attachments/assets/28a7e275-4b12-4d80-8b63-f6083eb957ab)             
+	![Image](https://github.com/user-attachments/assets/a4cfb278-3b02-491c-bfa8-2bf264f3b5bb)
+	![Image](https://github.com/user-attachments/assets/3dc70b8c-56c4-4881-a520-494bb41ab218)
+	![Image](https://github.com/user-attachments/assets/bb876e61-491b-49b0-bef2-4f989fec1e86)
+	![Image](https://github.com/user-attachments/assets/77213b30-df7d-41c1-99f2-b588ba3f5f26)
+	![Image](https://github.com/user-attachments/assets/28a7e275-4b12-4d80-8b63-f6083eb957ab)             
 
 **User GUI**
-![Image](https://github.com/user-attachments/assets/9b633cb9-929b-46c4-a888-866ce1624e2d)
-![Image](https://github.com/user-attachments/assets/803766fb-a3a0-4b93-ace6-d8df14d3fdd8)
+	![Image](https://github.com/user-attachments/assets/9b633cb9-929b-46c4-a888-866ce1624e2d)
+	![Image](https://github.com/user-attachments/assets/803766fb-a3a0-4b93-ace6-d8df14d3fdd8)
 
 ## 3. 프로젝트 기능 설명
 
