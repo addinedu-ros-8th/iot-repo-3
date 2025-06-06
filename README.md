@@ -1,32 +1,294 @@
-![header](https://capsule-render.vercel.app/api?type=venom&color=timeGradient&height=300&section=header&text=SmartDesk&fontColor=333333&fontSize=90)
+![header](https://capsule-render.vercel.app/api?type=venom&color=timeGradient&height=300&section=header&text=SmartDeskterior&fontColor=333333&fontSize=90)                  
+### Team 3. DeskMate(IOT Project)
 
-# Smart DeskTerior
-**Team 3. DeskMate(IOT Project)**
+<details>
+  <summary><strong>📑 목차 (Table of Contents) 📑</strong></summary>
+
+- [Project Overview](#project-overview)
+- [System Requirements](#system-requirements)
+- [Installation & Running](#installation--running)
+- [기능 및 기술](#기능-및-기술)
+  - [조명 제어(PWM)](#조명-제어)
+  - [데스크 높이 제어(Linear Actuator, Ultrasonic Sensor)](#데스크-높이-제어)
+  - [모니터 높이 제어(모니터 암 구조)](#모니터-높이-제어)
+  - [사용자 커스텀 모드(RFID)](#사용자-커스텀-모드)
+  - [UI(Serial Communication, TCP)](#ui)
+- [문제 상황 및 해결 방안](#문제-상황-및-해결-방안)
+  - [TCP 포트](#tcp-포트)
+  - [하드웨어 이슈](#하드웨어-이슈)
+- [프로젝트 운영](#프로젝트-운영)
+  - [Skill Set](#skill-set)
+  - [Members](#members)
+  - [Process](#process)
+- [프로젝트 설계](#프로젝트-설계)
+  - [System Architecture](#system-architecture)
+  - [Data Structure](#data-structure)
+  - [Scenario_Sequnce Diagram](#scenario_sequnce-diagram)
+  - [기구 설계](#기구-설계)
+
+</details>
 
 ---
 
-## 목차 (Table of Contents)
-1. [프로젝트 개요](#프로젝트-개요)  
-2. [Skill Set](#computer-skill-set)  
-3. [구성원 및 역할](#sparkles-구성원-및-역할)  
-4. [프로젝트 설계 및 개발 계획](#hourglass_flowing_sand-프로젝트-설계-및-개발-계획)  
-5. [IOT 스마트데스크 프로젝트 상세](#iot-스마트데스크-프로젝트)  
-    1. [프로젝트 소개](#1-프로젝트-소개)  
-    2. [프로젝트 설계](#2-프로젝트-설계)  
-        - [Scenario](#2-1-scenario)  
-        - [System Requirements](#2-2-system-requirements)  
-        - [System Architecture](#2-3-system-architecture)  
-        - [Desk 기구설계](#2-4-desk-기구설계)  
-        - [GUI 화면 설계](#2-5-gui-화면-설계)  
-    3. [프로젝트 기능 설명](#3-프로젝트-기능-설명)  
-    4. [프로젝트 결과](#4-프로젝트-결과)  
+<h2>&#128194; Project Overview &#128194;</h2>
+
+> **Smart DeskTerior**는 IoT 기술을 통해 데스크 주변 환경(높낮이, 모니터 각도, 조명 등)을 자동·수동 제어하여 사용자의 편의와 생산성을 높이는 프로젝트입니다. **Deskterior**란 사무실 책상을 꾸민다는 의미에서 나온 용어로, Desk와 Interior의 합성어입니다. 현재는 가시적인 예쁨, 즉 눈에 예쁜 디자인적인 측면이 강조되고 있는데 **자동화**라는 부분을 추가하여 편의성을 더 해 책상을 세팅할 수 있으면 어떨까 생각을 해 프로젝트를 진행하게 되었습니다.
+
+> 현존하는 스마트 데스크들의 경우 사람들의 키에 맞춰 높이 조절의 기능만 존재하지만 이 프로젝트는 컴퓨터를 많이 사용하는 현대인들을 고려하여 모니터의 높이, 조명 밝기까지 함께 연동하여 설정하고 그 값을 저장하여 불러올 수 있도록 합니다. 더 편안한 컴퓨터 작업과 컴퓨터 외에도 더 다양한 작업을 할 수 있도록 만들었습니다.
+
+<h4>System Requirements</h4>
+
+> - 하드웨어: 센서(거리), 모터(리니어 액추에이터, 서보 등), RFID 리더기, 마이크로컨트롤러(Arduino, ESP32 등)  
+> - 소프트웨어: Python(Flask, PyQt), C++(임베디드), MySQL/ Amazon RDS, Jira/Confluence/Slack(협업 툴)
+
+|ID|Function|Description|
+|-----|-----|-----|
+|SR_01|조명 밝기 제어|사용자의 기분, 시간대, 작업 모드(업무, 게임, 독서 등)에 따라 조명 밝기를 변경|
+|SR_02|데스크 높낮이 제어|앉아 있을 때, 서 있을 때, 사람의 키에 따라 데스크 높이 조절<br>기본 설정 값 : 100<br><br>Min : 100<br>Max : 150|
+|SR_03|모니터 높낮이 제어|사용하는 모드, 자세, 키에 따라 모니터의 높이를 제어|
+|SR_04|모니터 각도 제어|사용하는 모드, 자세, 키, 모니터 높이에 따라 모니터의 각도를 제어|
+|SR_05|데스크 제어를 위한 사용자 인터페이스|데스크에 부착되어 있는 버튼으로 사용자가 직접 수동으로 제어<br>데스크에 내장되어 있는 터치 스크린으로 사용자가 데스크에서 제어<br>사용자의 컴퓨터에서 원격으로 데스크 제어|
+|SR_06|데스크 현재 정보 열람|현재 조명,모니터 높낮이, 모니터 각도,책상 높낮이의 정보를 컴퓨터 인터페이스에서 확인|
+|SR_07|카드에 등록된 정보로 모드 제어|사용자의 정보, 모드가 저장되어 있는 카드를 꽂아 사용자가 저장한 모드를 불러와 그에 맞게 제어|
+|SR_08|데스크 사용 기록 조회|데스크의 각종 기능을 제어했던 모든 사용기록을 조회|
+
+<hr>
+
+<h2>&#128187; Installation & Running &#128187;</h2>
+
+1. **프로젝트 클론**
+    ```bash
+    git clone https://github.com/yourusername/smart-desk-project.git
+    cd smart-desk-project
+    ```
+2. **하드웨어 연결**
+    - 센서, 모터, RFID 리더기, 마이크로컨트롤러 등을 설계도에 맞게 연결
+    - 전원, I/O 입출력 핀, 시리얼 통신 포트 확인
+
+3. **소프트웨어 환경 세팅**
+    - Python 라이브러리 설치  
+      ```bash
+      pip install -r requirements.txt
+      ```
+    - (선택) Arduino/ESP32 IDE 설정 후 펌웨어 업로드
+
+4. **실행**
+    - **Flask 서버** 및 **PyQt GUI** 실행  
+      ```bash
+      python app.py
+      ```
+    - 브라우저(또는 GUI 프로그램)에서 기능 테스트  
+
+5. **기타**
+    - DB(MySQL/Amazon RDS) 설정 파일(.env 등)에 접속 정보 기입
+    - RFID 리더기, 모터 제어 라이브러리 등 외부 라이브러리 설치 여부 확인
+  
+      
+<hr>
+
+<h2>&#128297; 기능 및 기술 &#128297;</h2>
+<h3>조명 제어</h3>
+<table>
+    <tr>
+        <td width="25%" align="center">
+            <h5>Desk GUI</h5>
+        </td>
+        <td width="25%" align="center">
+            <h5>User GUI</h5>
+        </td>
+        <td width="25%" align="center">
+            <h5>Hardware Interface</h5>
+        </td>
+        <td width="25%" align="center">
+            <h4>Descriptions</h4>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <img src="https://github.com/user-attachments/assets/1238bce0-ebc1-4886-9e4c-13424a6294ff" width="100%" />
+        </td>
+        <td>
+            <img src="https://github.com/user-attachments/assets/7bdf66f1-a100-4dd6-a46d-4293261775a2" width="100%" />
+        </td>
+        <td>
+            <img src="https://github.com/user-attachments/assets/8bc60f13-f97e-4401-8fcb-45f98584c128" width="100%" />
+        </td>
+        <td>
+            <ul>
+                <li>0 ~ 8 단계의 밝기로 조명 제어</li>
+                <li>LED 밝기 제어는 max 밝기와 OFF 범위를 8단계로 나누어 값을 지정</li>
+            </ul>
+        </td>
+    </tr>
+</table>
+<h5>PWM 제어</h5>
+
+<h3>데스크 높이 제어</h3>
+<table>
+    <tr>
+        <td width="25%" align="center">
+            <h5>Desk GUI</h5>
+        </td>
+        <td width="25%" align="center">
+            <h5>User GUI</h5>
+        </td>
+        <td width="25%" align="center">
+            <h5>Hardware Interface</h5>
+        </td>
+        <td width="25%" align="center">
+            <h4>Descriptions</h4>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <img src="" width="100%" />
+        </td>
+        <td>
+            <img src="" width="100%" />
+        </td>
+        <td>
+            <img src="" width="100%" />
+        </td>
+        <td>
+            <ul>
+                <li>자신이 원하는 높이로 책상 높이를 맞춰 사용 할 수 있는 기능</li>
+                <li>데스크 다리 제어 : 리니어 액추에이터</li>
+                <li>책상 높이 측정 : 초음파센서</li>
+            </ul>
+        </td>
+    </tr>
+</table>
+<h5>Linear Actuator</h5>
+<h5>Ultrasonic Sensor</h5>
+
+<h3>모니터 높이 제어</h3>
+<table>
+    <tr>
+        <td width="25%" align="center">
+            <h5>Desk GUI</h5>
+        </td>
+        <td width="25%" align="center">
+            <h5>User GUI</h5>
+        </td>
+        <td width="25%" align="center">
+            <h5>Hardware Interface</h5>
+        </td>
+        <td width="25%" align="center">
+            <h4>Descriptions</h4>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <img src="" width="100%" />
+        </td>
+        <td>
+            <img src="" width="100%" />
+        </td>
+        <td>
+            <img src="" width="100%" />
+        </td>
+        <td>
+            <ul>
+                <li>모니터 암이 책상에 연동되어 있어 따로 조절하지 않고 앉은 자리에서 원하는 높이, 각도로 제어 할 수 있는 기능</li>
+                <li>2개의 서보 모터로 각각 높이, 각도를 제어</li>
+            </ul>
+        </td>
+    </tr>
+</table>
+<h5>모니터 암 구성</h5>
+
+<h3>사용자 커스텀 모드</h3>
+<table>
+    <tr>
+        <td width="25%" align="center">
+            <h5>Desk GUI</h5>
+        </td>
+        <td width="25%" align="center">
+            <h5>User GUI</h5>
+        </td>
+        <td width="25%" align="center">
+            <h5>Hardware Interface</h5>
+        </td>
+        <td width="25%" align="center">
+            <h4>Descriptions</h4>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <img src="" width="100%" />
+        </td>
+        <td>
+            <img src="" width="100%" />
+        </td>
+        <td>
+            <img src="" width="100%" />
+        </td>
+        <td>
+            <ul>
+                <li>사용자가 보유하고 있는 사용자 카드를 인식시키면 사용자 커스텀 모드 사용 가능</li>
+                <li>User GUI에서는 값을 수정, 새로운 모드 저장 등 사용자 카드 내부 데이터 수정도 가능</li>
+                <li>Desk GUI에서는 저장되어 있는 설정 적용만 가능</li>
+                <li>사용자 카드는 RFID 카드, 인식은 RFID 안테나로 구성</li>
+            </ul>
+        </td>
+    </tr>
+</table>
+<h5>RFID</h5>
+
+<h3>UI</h3>
+내용 정리 아직 안 됨
+
+<hr>
+
+<h2>&#128204; 문제 상황 및 해결 방안 &#128204;</h2>
+<h3>TCP 포트</h3>
+<h3></h3>
+<h3>하드웨어 이슈</h3>
 
 
----
+<hr>
 
-## 프로젝트 개요
-> **Smart DeskTerior**는 IoT 기술을 통해 데스크 주변 환경(높낮이, 모니터 각도, 조명 등)을 자동·수동 제어하여 사용자의 편의와 생산성을 높이는 프로젝트입니다.
+<h2>&#128197; 프로젝트 운영 &#128197;</h2>
+<h3>Skill Set</h3>
 
+|Categories|SKills|
+|------|------|
+|개발환경|![Static Badge](https://img.shields.io/badge/linux-%23FCC624?style=plastic&logo=linux&logoColor=ffffff) ![Static Badge](https://img.shields.io/badge/ubuntu-22.04-grey?style=plastic&logo=ubuntu&logoColor=ffffff&labelColor=%23E95420) ![Static Badge](https://img.shields.io/badge/vsCode-%232185D0?style=plastic&logo=vscode&logoColor=ffffff) ![Static Badge](https://img.shields.io/badge/jupyter-%23F37626?style=plastic&logo=jupyter&logoColor=ffffff) ![Static Badge](https://img.shields.io/badge/arduino-sketchIDE-grey?style=plastic&logo=arduino&labelColor=%2300878F)|
+|Design|![Static Badge](https://img.shields.io/badge/figma-%23F24E1E?style=plastic&logo=figma&logoColor=white) ![Static Badge](https://img.shields.io/badge/pyQT-Designer-grey?style=plastic&logo=qt&logoColor=white&labelColor=%2341CD52)|
+|Data|![Static Badge](https://img.shields.io/badge/mysql-%234479A1?style=plastic&logo=mysql&logoColor=ffffff) ![Static Badge](https://img.shields.io/badge/amazonrds-%23527FFF?style=plastic&logo=amazonrds&logoColor=ffffff)|
+|Programming Languages|![Static Badge](https://img.shields.io/badge/Python-%233776AB?style=plastic&logo=python&logoColor=ffffff) ![Static Badge](https://img.shields.io/badge/C%2B%2B-%2300599C?style=plastic&logo=cplusplus&logoColor=white)|
+|Communication|![Static Badge](https://img.shields.io/badge/serial-grey?style=plastic) ![Static Badge](https://img.shields.io/badge/flask-%23000000?style=plastic&logo=flask&logoColor=%23FFFFFF)|
+|Cooperation Tools|![Static Badge](https://img.shields.io/badge/jira-%230052CC?style=plastic&logo=jira&logoColor=ffffff) ![Static Badge](https://img.shields.io/badge/confluence-%23172B4D?style=plastic&logo=confluence&logoColor=ffffff) ![Static Badge](https://img.shields.io/badge/slack-%234A154B?style=plastic&logo=slack)|
+
+<h3>Members</h3>
+
+|구성원|역할|Contacts|
+|-----|-----|-----|
+|**이정림 (팀장)**|프로젝트 관리<br>Jira 관리<br>Desk GUI 설계<br>RFID : 사용자 인증, 커스텀 모드<br>User GUI 구현<br>TCP/IP 통신<br>Serial 통신|[JlimL(LeeJ)](https://github.com/JlimL) <br>[jeongliml2002@gmail.com](mailto:jeongliml2002@gmail.com)|
+|**심채훈**|기구 설계<br>DB 설계<br>책상 높이 제어<br>Serial 통신<br>TCP/IP 통신<br>Desk GUI 구현|[Huni0128(심채훈)](https://github.com/Huni0128) <br>[tlacogns@gmail.com](mailto:tlacogns@gmail.com)|
+|**이우재**|기구 설계<br>DB 설계<br>DB 관리<br>모니터 제어<br>Server 구현<br>발표|[woojaelee-k(이우재)](https://github.com/woojaelee-k) <br>[tedlee911@gmail.com](mailto:tedlee911@gmail.com)|
+|**권 빛**|User GUI 설계<br>User GUI 구현<br>LED 제어<br>PPT 제작<br>GitHub 정리|[V2TAMIN(V2TAMIN)](https://github.com/V2TAMIN) <br>[k23909275@gmail.com](mailto:k23909275@gmail.com)|
+
+<h3>Process</h3>
+<img src="https://github.com/user-attachments/assets/1332319e-8ee2-49f0-9397-74eceacdb5a5" width="1000" align="center" />
+
+<hr>
+
+<h2>&#128221; 프로젝트 설계 &#128221;</h2>
+<h3>System Architecture</h3>
+<h3>Data Structure</h3>
+<h3>Scenario_Sequnce Diagram</h3>
+<h3>기구 설계</h3>
+
+
+
+
+
+
+<br><br><br><br>
+<hr>
+
+하기 내용은 구성 확정 되면 삭제할 내용
 ---
 
 ## :computer: Skill Set
@@ -42,12 +304,12 @@
 ---
 
 ## :sparkles: 구성원 및 역할
-|구성원|역할|
-|-----|-----|
-|**이정림 (팀장)**|프로젝트 관리<br>Jira 관리<br>Desk GUI 설계<br>RFID : 사용자 인증, 커스텀 모드<br>User GUI 구현<br>TCP/IP 통신<br>Serial 통신|
-|**심채훈**|기구 설계<br>DB 설계<br>책상 높이 제어<br>Serial 통신<br>TCP/IP 통신<br>Desk GUI 구현|
-|**이우재**|기구 설계<br>DB 설계<br>DB 관리<br>모니터 제어<br>Server 구현<br>발표|
-|**권 빛**|User GUI 설계<br>User GUI 구현<br>LED 제어<br>PPT 제작<br>GitHub 정리|
+|구성원|역할|Contacts|
+|-----|-----|-----|
+|**이정림 (팀장)**|프로젝트 관리<br>Jira 관리<br>Desk GUI 설계<br>RFID : 사용자 인증, 커스텀 모드<br>User GUI 구현<br>TCP/IP 통신<br>Serial 통신||
+|**심채훈**|기구 설계<br>DB 설계<br>책상 높이 제어<br>Serial 통신<br>TCP/IP 통신<br>Desk GUI 구현||
+|**이우재**|기구 설계<br>DB 설계<br>DB 관리<br>모니터 제어<br>Server 구현<br>발표||
+|**권 빛**|User GUI 설계<br>User GUI 구현<br>LED 제어<br>PPT 제작<br>GitHub 정리||
 
 ---
 
