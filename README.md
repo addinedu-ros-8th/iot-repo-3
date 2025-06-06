@@ -91,13 +91,13 @@
 <table>
     <tr>
         <td width="25%" align="center">
-            <h5>Desk GUI</h5>
+            <h4>Desk GUI</h4>
         </td>
         <td width="25%" align="center">
-            <h5>User GUI</h5>
+            <h4>User GUI</h4>
         </td>
         <td width="25%" align="center">
-            <h5>Hardware Interface</h5>
+            <h4>Hardware Interface</h4>
         </td>
         <td width="25%" align="center">
             <h4>Descriptions</h4>
@@ -127,13 +127,13 @@
 <table>
     <tr>
         <td width="25%" align="center">
-            <h5>Desk GUI</h5>
+            <h4>Desk GUI</h4>
         </td>
         <td width="25%" align="center">
-            <h5>User GUI</h5>
+            <h4>User GUI</h4>
         </td>
         <td width="25%" align="center">
-            <h5>Hardware Interface</h5>
+            <h4>Hardware Interface</h4>
         </td>
         <td width="25%" align="center">
             <h4>Descriptions</h4>
@@ -165,13 +165,13 @@
 <table>
     <tr>
         <td width="25%" align="center">
-            <h5>Desk GUI</h5>
+            <h4>Desk GUI</h4>
         </td>
         <td width="25%" align="center">
-            <h5>User GUI</h5>
+            <h4>User GUI</h4>
         </td>
         <td width="25%" align="center">
-            <h5>Hardware Interface</h5>
+            <h4>Hardware Interface</h4>
         </td>
         <td width="25%" align="center">
             <h4>Descriptions</h4>
@@ -200,23 +200,17 @@
 <h3>사용자 커스텀 모드</h3>
 <table>
     <tr>
-        <td width="25%" align="center">
-            <h5>Desk GUI</h5>
+        <td width="30%" align="center">
+            <h4>Desk GUI</h4>
         </td>
-        <td width="25%" align="center">
-            <h5>User GUI</h5>
+        <td width="30%" align="center">
+            <h4>User GUI</h4>
         </td>
-        <td width="25%" align="center">
-            <h5>Hardware Interface</h5>
-        </td>
-        <td width="25%" align="center">
+        <td width="30%" align="center">
             <h4>Descriptions</h4>
         </td>
     </tr>
     <tr>
-        <td>
-            <img src="" width="100%" />
-        </td>
         <td>
             <img src="" width="100%" />
         </td>
