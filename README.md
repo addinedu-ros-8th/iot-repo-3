@@ -200,22 +200,16 @@
 <h3>사용자 커스텀 모드</h3>
 <table>
     <tr>
-        <td width="30%" align="center">
-            <h4>Desk GUI</h4>
-        </td>
-        <td width="30%" align="center">
+        <td width="50%" align="center">
             <h4>User GUI</h4>
         </td>
-        <td width="30%" align="center">
+        <td width="50%" align="center">
             <h4>Descriptions</h4>
         </td>
     </tr>
     <tr>
         <td>
-            <img src="" width="100%" />
-        </td>
-        <td>
-            <img src="" width="100%" />
+            <img src="https://github.com/user-attachments/assets/0e66e1ca-7183-4226-ab3f-345eb089fa78" width="100%" />
         </td>
         <td>
             <ul>
@@ -270,10 +264,142 @@
 
 <h2>&#128221; 프로젝트 설계 &#128221;</h2>
 <h3>System Architecture</h3>
-<h3>Data Structure</h3>
-<h3>Scenario_Sequnce Diagram</h3>
-<h3>기구 설계</h3>
+<table>
+  <tr>
+    <td width="60%">
+      <img src="https://github.com/user-attachments/assets/ae15ac57-8930-46a8-8983-72196175a49d" width="100%" />
+    </td>
+    <td width="40%">
+      <ul>
+        <li>2개의 아두이노 보드, 1개의 라즈베리파이 보드, 1대의 컴퓨터, 1대의 데스크 본체로 시스템 이루어짐</li>
+        <li>아두이노 보드와 라즈베리파이 보드는 데스크 내부에 부착되어 있음</li>
+        <li>데스크 내부에서는 시리얼 통신으로, 데스크 외부로의 통신은 TCP 통신으로 설계</li>
+      </ul>
+    </td>
+  </tr>
+</table>
 
+<h3>Data Structure</h3>
+<table>
+  <tr>
+    <td width="60%">
+      <img src="https://github.com/user-attachments/assets/719aea29-7bdc-4645-8d62-51c75d060e66" width="100%" />
+    </td>
+    <td width="40%">
+      <ul>
+        <li>
+          desk_info : 데스크 자체의 정보 관리
+          <ul>
+            <li>데스크 ID : 데스크의 제품 번호</li>
+            <li>데스크의 기본 상태 값들 저장</li>
+          </ul>
+        </li>
+        <li>
+          log : 데스크 사용 정보 관리
+          <ul>
+            <li>데스크 유저 ID : RFID UID 값으로 저장, 없을 시 None으로 저장</li>
+            <li>사용한 상태 값 저장</li>
+            <li>해당 상태로 변경한 시간 저장</li>
+          </ul>
+        </li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>Scenario_Sequnce Diagram</h3>
+<table>
+  <tr>
+    <td width="30%">
+      <img src="https://github.com/user-attachments/assets/19a7bb6e-49a2-461e-82b3-b331f8d1313a" width="100%" />
+    </td>
+    <td width="20%">
+      <ul>
+        <li></li>
+      </ul>
+    </td>
+    <td width="30%">
+      <img src="https://github.com/user-attachments/assets/768b0ca8-4562-4f66-b15c-38c2368a37e5" width="100%" />
+    </td>
+    <td width="20%">
+      <ul>
+        <li></li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td width="30%">
+      <img src="https://github.com/user-attachments/assets/60edacdf-2391-4af6-bd41-50f43be6db3b" width="100%" />
+    </td>
+    <td width="20%">
+      <ul>
+        <li></li>
+      </ul>
+    </td>
+    <td width="30%">
+      <img src="https://github.com/user-attachments/assets/7b8617cd-9413-4d3d-bbfc-0b6e83224b6b" width="100%" />
+    </td>
+    <td width="20%">
+      <ul>
+        <li></li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+<h3>기구 설계</h3>
+<table>
+  <tr>
+    <td wisth=20%">
+      <h4>leg_mount1</h4>
+    </td>
+    <td width="20%">
+      <h4>leg_mount2</h4>
+    </td>
+    <td width="20%">
+      <h4>servo_mount</h4>
+    </td>
+    <td width="40%">
+      <h4>assembly</h4>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <img src="https://github.com/user-attachments/assets/2de5a670-41c2-4302-8178-40975545be6c" width="100%" />
+    </td>
+    <td>
+      <img src="https://github.com/user-attachments/assets/48b52ef1-e40d-48f1-bae5-3e58ee4ca324" width="100%" />
+    </td>
+    <td>
+      <img src="https://github.com/user-attachments/assets/3615c3ed-7c07-43c4-9ecc-56e372215a1f" width="100%" />
+    </td>
+    <td rowspan="3">
+      <img src="https://github.com/user-attachments/assets/36d5a7d9-1f09-4abb-bac9-d65590ee90f6" width="100%" />
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <h4>servo1_fix</h4>
+    </td>
+    <td>
+      <h4>servo1_fly</h4>
+    </td>
+    <td>
+      <h4>servo2_fix</h4>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <img src="https://github.com/user-attachments/assets/c48867fd-b5c2-42ce-8014-47aa64276784" width="100%" />
+    </td>
+    <td>
+      <img src="https://github.com/user-attachments/assets/455b4dbf-581e-4ee4-80c5-ab72f948f26b" width="100%" />
+    </td>
+    <td>
+      <img src="https://github.com/user-attachments/assets/8ef58288-e3e4-447e-89b0-3c1179a14eae" width="100%" />
+    </td>
+  </tr>
+</table>
 
 
 
