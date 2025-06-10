@@ -420,63 +420,56 @@
 <hr>
 
 <h2>&#128204; 문제 상황 및 해결 방안 &#128204;</h2>
-<h3>통신 구현 방법 변경</h3>
 <table>
   <tr>
-    <td width="50%">
+    <td width="40%" align="center">
       <h4>문제</h4>
     </td>
-    <td width="50%">
+    <td width="60%" align="center">
       <h4>해결 방안</h4>
     </td>
   </tr>
   <tr>
-    <td></td>
     <td>
-      <ul>
-        <li></li>
-      </ul>
+      <h4>포트 넘버</h4>
+      무선 통신 구현 후 테스트 하는 과정 중에 포트 넘버가 계속 사용 중으로 접속 불가 에러 발생
+    </td>
+    <td>
+      <h4>문제 원인</h4>
+      TCP 통신 프로그램 종료 후에도 소켓이 <code>TIME_WAIT</code>상태에 남아있어 발생
+      <h4>해결</h4>
+      <code>SO_REUSEADDR</code>옵션을 설정하여 재사용 가능하게 설정<br>
+      설정하지 않을 시, 해당 포트는 커널에 의해 <code>TIME_WAIT</code>상태로 잠시 사용 중이 되어 재실행 시, <code>Address already in use</code>에러 발생
+      <pre><code>
+        import socket
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        #….
+      </code></pre>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <h4>USB 포트 넘버</h4>
+      USB 포트 넘버 변경으로 인한 보드 접속 불가 에러
+    </td>
+    <td>
+      <h4>문제 원인</h4>
+      리눅스 기반 OS는 <strong>udev(user-space device manager)</strong>를 사용하여 <code>/dev</code>아래의 장치 파일을 동적으로 생성<br>
+      리눅스는 기본적으로 동적이며 명시적 설정 없이는 고정되지 않음
+      <h4>해결</h4>
+      udev 규칙 이용<br>
+      <code>/etc/udev/rules.d/99-usb-serial.rules</code>와 같은 곳에 아래 규칙 추가<br><br>
+      <pre><code>
+        SUBSYSTEM=="tty", ATTRS{idVendor}==1a86", ATTRS{idProduct}="7523", SYMLINK+=mydevice"
+      </code></pre>
+      <code>/dev/mydevice</code>라는 고정 이름으로 항상 접근 가능
     </td>
   </tr>
 </table>
-<h3>TCP 포트</h3>
-<table>
-  <tr>
-    <td width="50%">
-      <h4>문제</h4>
-    </td>
-    <td width="50%">
-      <h4>해결 방안</h4>
-    </td>
-  </tr>
-  <tr>
-    <td></td>
-    <td>
-      <ul>
-        <li></li>
-      </ul>
-    </td>
-  </tr>
-</table>
-<h3>하드웨어 이슈</h3>
-<table>
-  <tr>
-    <td width="50%">
-      <h4>문제</h4>
-    </td>
-    <td width="50%">
-      <h4>해결 방안</h4>
-    </td>
-  </tr>
-  <tr>
-    <td></td>
-    <td>
-      <ul>
-        <li></li>
-      </ul>
-    </td>
-  </tr>
-</table>
+
+> #### 회고
+> 처음에 통신 설계 당시에는 TCP 통신으로 무선 통신을 설계 했으나 시간과 기술적인 한계로 간단한 web 페이지 구축 가능한 flask로 무선 통신을 구현하여 이를 TCP로 다시 제대로 구현을 하면 좋지 않았을까 생각한다.
 
 <hr>
 
@@ -558,16 +551,30 @@
       <img src="https://github.com/user-attachments/assets/8744f662-0af8-473c-b4d1-b297bcfb29c9" width="100%" />
     </td>
     <td width="20%">
+      RFID 카드로 유저 인식하는 기능 성공 시나리오
       <ul>
-        <li></li>
+        <li>안테나에서 카드 인식</li>
+        <li>UID, Desk Server로 송신</li>
+        <li>Desk Server에서 DB에 저장되어 있는 UID와 수신 받은 UID 비교</li>
+        <li>GUI에 UID 전송하며 Mode Button Enable</li>
+        <li>User가 원하는 모드 선택</li>
+        <li>선택한 모드 설정 값 각 컨트롤러에 송신</li>
+        <li>각 컨트롤러는 수신 받은 값으로 하드웨어 제어</li>
+        <li>성공 코드 전송 후 DB에 로그 업데이트</li>
       </ul>
     </td>
     <td width="30%">
       <img src="https://github.com/user-attachments/assets/b0fc3c40-131f-4e0f-ad19-5d2f4485f51b" width="100%" />
     </td>
     <td width="20%">
+      RFID 카드로 유저 인식하는 기능 실패 시나리오
       <ul>
-        <li></li>
+        <li>안테나에서 카드 인식</li>
+        <li>UID, Desk Server로 송신</li>
+        <li>Desk Server에서 DB에 저장되어 있는 UID와 수신 받은 UID 비교</li>
+        <li>UID 인식 불가하면 Error Message 띄움</li>
+        <li>User Card 제거</li>
+        <li>Error Code 전송 후 DB에 로그 업데이트</li>
       </ul>
     </td>
   </tr>
@@ -576,16 +583,27 @@
       <img src="https://github.com/user-attachments/assets/4a610bb0-7941-43dc-a53d-c7d439236e71" width="100%" />
     </td>
     <td width="20%">
+      Manual Control 성공 시나리오
       <ul>
-        <li></li>
+        <li>Hardware interface 혹은 Desk GUI, User GUI로 제어 동작</li>
+        <li>제어 값 Desk Server로 송신</li>
+        <li>Desk Server가 해당하는 컨트롤러에 제어 값 송신</li>
+        <li>각 컨트롤러는 수신 받은 값으로 하드웨어 제어</li>
+        <li>성공 코드 전송 후 DB에 로그 업데이트</li>
       </ul>
     </td>
     <td width="30%">
       <img src="https://github.com/user-attachments/assets/10e5d2d1-b996-4657-ba7b-eb58e94a8be0" width="100%" />
     </td>
     <td width="20%">
+      Manual Controll 실패 시나리오
       <ul>
-        <li></li>
+        <li>Hardware interface 혹은 Desk GUI, User GUI로 제어 동작</li>
+        <li>제어 값 Desk Server로 송신</li>
+        <li>Desk Server가 해당하는 컨트롤러에 제어 값 송신</li>
+        <li>각 컨트롤러는 수신 받은 값으로 하드웨어 제어</li>
+        <li>위 과정 중에 접촉 불량, 통신 단절 등의 문제로 진행이 안 될 시 Error Message 띄움</li>
+        <li>Error Code 전송 후 DB에 로그 업데이트</li>
       </ul>
     </td>
   </tr>
