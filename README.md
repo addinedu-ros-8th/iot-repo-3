@@ -55,6 +55,84 @@
 <hr>
 
 <h2>&#128297; 기능 및 기술 &#128297;</h2>
+<h3>사용자 커스텀 모드</h3>
+<table>
+    <tr>
+        <td width="50%" align="center">
+            <h4>User GUI</h4>
+        </td>
+        <td width="50%" align="center">
+            <h4>Descriptions</h4>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <img src="https://github.com/user-attachments/assets/0e66e1ca-7183-4226-ab3f-345eb089fa78" width="100%" />
+        </td>
+        <td>
+            <ul>
+                <li>사용자가 보유하고 있는 사용자 카드를 인식시키면 사용자 커스텀 모드 사용 가능</li>
+                <li>User GUI에서는 값을 수정, 새로운 모드 저장 등 사용자 카드 내부 데이터 수정도 가능</li>
+                <li>Desk GUI에서는 저장되어 있는 설정 적용만 가능</li>
+                <li>사용자 카드는 RFID 카드, 인식은 RFID 안테나로 구성</li>
+            </ul>
+        </td>
+    </tr>
+</table>
+<h4>RFID(Radio-Frequency Identiifcation)</h4>
+무선 주파수를 이용하여 사물, 사람의 정보를 식별하고 추적하는 기술
+<ul>
+  <li>태그 내부의 정보를 실시간 갱신 가능</li>
+  <li>비접촉 방식으로 금속 물질도 투과 가능하여 불결하거나 열악한 환경에서도 사용 가능</li>
+  <li>재사용 가능</li>
+</ul>
+<table>
+  <tr>
+    <td width="400" align="center">
+      <strong>구성요소</strong>
+    </td>
+    <td width="600" align="center">
+      <strong>역할</strong>
+    </td>
+  </tr>
+  <tr>
+    <td>RFID tag</td>
+    <td>정보를 보유한 대상(사람, 물건 등에 부착)</td>
+  </tr>
+  <tr>
+    <td>RFID reader</td>
+    <td>태그의 정보를 읽고, 필요 시 쓰기</td>
+  </tr>
+  <tr>
+    <td>RFID antenna</td>
+    <td>리더기 또는 태그의 RF 신호 송수신 보조</td>
+  </tr>
+  <tr>
+    <td>RFID Middleware(Optional)</td>
+    <td>데이터 해석, 저장, 시스템 연동</td>
+  </tr>
+</table>
+
+**MFRC522**                                         
+RFID 리더기 칩(모듈), 리더기 + 안테나 일체형, 패시브 태그 인식                    
+> **작동 방식**                           
+> 1. 리더기(MFRC522)가 RF 신호 송신
+>     - 주파수: **13.56MHz (HF 대역)**
+>     - MFRC522는 내장된 안테나(코일)를 통해 전자기장을 생성하여 주변 태그에게 신호를 보냄
+> 2. 패시브 RFID 태그 전력 획득
+>     - 자체 배터리가 없는 태그는 MFRC522의 RF 신호에서 전력을 유도
+>     - 이 전력을 통해 내부 IC가 작동하여 데이터를 전송할 준비를 함
+> 3. 태그가 응답 전송(inductive Coupling + Load Modulation)
+>     - MFRC522의 자기장에 **부하 변화(Load Modulation)**를 주어 데이터를 전송
+>     - ASK(Amplitude Shift Keying) 변조 방식 사용
+>     - ISO 14443-A 표준 기반 통신
+> 4. MFRC522가 응답 신호 수신 및 디코딩
+>     - 반사된 신호의 변화를 감지하여
+>     - UID(고유 ID), 데이터 블록 등의 정보를 해석
+> 5. MCU로 데이터 전송
+>     - SPI/I2C/UART로 마이크로컨트롤러에 전송
+>     - 사용자는 이를 이용해 인증, 저장, 출력 등의 처리를 수행
+
 <h3>조명 제어</h3>
 <table>
     <tr>
@@ -90,6 +168,14 @@
     </tr>
 </table>
 <h4>PWM 제어</h4>
+<strong>디지털 출력으로 아날로그 회로를 제어하는 기술</strong>이자 효율적인 스위칭 제어의 기본<br>
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/b19f4921-4e56-44ef-ac97-90fc33c4b1f5" width="400/" />
+  <img src="https://github.com/user-attachments/assets/985f1897-9281-48b9-b280-714f04ee34ac" width="400" />
+</div>
+
+일정한 주기 내에서 Duty비를 변화 시켜 평균 전압을 제어하는 방법                                     
+평균 전압 계산 법 : $$V_{\text{avg}} = V_{\text{high}} \times \frac{\text{Duty Cycle}}{100}$$
 
 <h3>데스크 높이 제어</h3>
 <table>
@@ -128,6 +214,17 @@
 </table>
 <h4>Linear Actuator</h4>
 <h4>Ultrasonic Sensor</h4>
+송신기와 수신기 사이의 통과 시간 측정 원리를 기반<br>
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/0e1fde78-93c7-4f5d-b00e-c14c853876df" width=400" />
+</div>
+
+**근접 스위치 방식**                                              
+초음파 개체 감지의 가장 단순한 유형                                               
+송신기와 수신기가 한 하우징 안에 있어 초음파가 감지 대상 개체에서 직접 수신기로 반사                                                   
+거리 구하는 공식 : $$L = \frac{T \times C}{2}$$                                            
+
+초음파 센서 원리 참고 : [바우머-초음파 센서 작동 원리 및 기술](https://www.baumer.com/kr/ko/service-support/function-principle/ultrasonic-sensors---function/a/Know-how_Function_Ultrasonic-sensors)
 
 <h3>모니터 높이 제어</h3>
 <table>
@@ -164,32 +261,6 @@
     </tr>
 </table>
 <h4>모니터 암 구성</h4>
-
-<h3>사용자 커스텀 모드</h3>
-<table>
-    <tr>
-        <td width="50%" align="center">
-            <h4>User GUI</h4>
-        </td>
-        <td width="50%" align="center">
-            <h4>Descriptions</h4>
-        </td>
-    </tr>
-    <tr>
-        <td>
-            <img src="https://github.com/user-attachments/assets/0e66e1ca-7183-4226-ab3f-345eb089fa78" width="100%" />
-        </td>
-        <td>
-            <ul>
-                <li>사용자가 보유하고 있는 사용자 카드를 인식시키면 사용자 커스텀 모드 사용 가능</li>
-                <li>User GUI에서는 값을 수정, 새로운 모드 저장 등 사용자 카드 내부 데이터 수정도 가능</li>
-                <li>Desk GUI에서는 저장되어 있는 설정 적용만 가능</li>
-                <li>사용자 카드는 RFID 카드, 인식은 RFID 안테나로 구성</li>
-            </ul>
-        </td>
-    </tr>
-</table>
-<h4>RFID</h4>
 
 <h3>Desk GUI</h3>
 <table>
