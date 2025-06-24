@@ -198,10 +198,10 @@ RFID 리더기 칩(모듈), 리더기 + 안테나 일체형, 패시브 태그 �
             <img src="" width="100%" />
         </td>
         <td>
-            <img src="" width="100%" />
+            <img src="https://github.com/user-attachments/assets/e7b983aa-31aa-4147-8c29-13e6480408d0" width="100%" />
         </td>
         <td>
-            <img src="" width="100%" />
+            <img src="https://github.com/user-attachments/assets/7e524ceb-02d5-4195-8ab4-c3bdaafe6b6d" width="100%" />
         </td>
         <td>
             <ul>
@@ -247,10 +247,10 @@ RFID 리더기 칩(모듈), 리더기 + 안테나 일체형, 패시브 태그 �
             <img src="" width="100%" />
         </td>
         <td>
-            <img src="" width="100%" />
+            <img src="https://github.com/user-attachments/assets/1404f1c3-3e2c-4d19-b3fc-5bb32dbbf4ab" width="100%" />
         </td>
         <td>
-            <img src="" width="100%" />
+            <img src="https://github.com/user-attachments/assets/6bc98069-4f6d-4873-8b31-7b252cd28774" width="100%" />
         </td>
         <td>
             <ul>
