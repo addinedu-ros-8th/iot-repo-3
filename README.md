@@ -181,9 +181,6 @@ RFID 리더기 칩(모듈), 리더기 + 안테나 일체형, 패시브 태그 �
 <table>
     <tr>
         <td width="25%" align="center">
-            <h4>Desk GUI</h4>
-        </td>
-        <td width="25%" align="center">
             <h4>User GUI</h4>
         </td>
         <td width="25%" align="center">
@@ -194,9 +191,6 @@ RFID 리더기 칩(모듈), 리더기 + 안테나 일체형, 패시브 태그 �
         </td>
     </tr>
     <tr>
-        <td>
-            <img src="" width="100%" />
-        </td>
         <td>
             <img src="https://github.com/user-attachments/assets/e7b983aa-31aa-4147-8c29-13e6480408d0" width="100%" />
         </td>
@@ -213,6 +207,16 @@ RFID 리더기 칩(모듈), 리더기 + 안테나 일체형, 패시브 태그 �
     </tr>
 </table>
 <h4>Linear Actuator</h4>
+<div>
+  <div align="center">
+    <img src="https://github.com/user-attachments/assets/a8466771-9ac1-41ce-9f15-f24f52f8cfe6" width="300" />
+  </div>
+  <div>
+    <li>기존 전기 모터의 원형 운동과 달리 직선으로 운동을 생성하는 액추에이터</li>
+    <li>유압/공압 실린더는 본질적으로 직선 운동을 생성</li>
+    <li>회전하는 모터에서 직선 운동을 생성하는 데 다른 많은 메커니즘이 사용</li>
+  </div>
+</div>
 <h4>Ultrasonic Sensor</h4>
 송신기와 수신기 사이의 통과 시간 측정 원리를 기반<br>
 <div align="center">
@@ -230,9 +234,6 @@ RFID 리더기 칩(모듈), 리더기 + 안테나 일체형, 패시브 태그 �
 <table>
     <tr>
         <td width="25%" align="center">
-            <h4>Desk GUI</h4>
-        </td>
-        <td width="25%" align="center">
             <h4>User GUI</h4>
         </td>
         <td width="25%" align="center">
@@ -243,9 +244,6 @@ RFID 리더기 칩(모듈), 리더기 + 안테나 일체형, 패시브 태그 �
         </td>
     </tr>
     <tr>
-        <td>
-            <img src="" width="100%" />
-        </td>
         <td>
             <img src="https://github.com/user-attachments/assets/1404f1c3-3e2c-4d19-b3fc-5bb32dbbf4ab" width="100%" />
         </td>
@@ -260,7 +258,6 @@ RFID 리더기 칩(모듈), 리더기 + 안테나 일체형, 패시브 태그 �
         </td>
     </tr>
 </table>
-<h4>모니터 암 구성</h4>
 
 <h3>Desk GUI</h3>
 <table>
